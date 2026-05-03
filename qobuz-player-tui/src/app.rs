@@ -230,7 +230,7 @@ impl App {
                 }
 
                 _ = tick_interval.tick() => {
-                    // Tick is now only used for notification cleanup
+                    // Tick is only used for notification cleanup
                 }
 
                 notification = receiver.recv() => {

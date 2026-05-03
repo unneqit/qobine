@@ -1,9 +1,10 @@
 use qobuz_player_controls::{
-    AppResult,
+    AppResult, TracklistReceiver,
     controls::Controls,
     database::{Database, ReferenceType},
     error::Error,
     notification::NotificationBroadcast,
+    tracklist::TracklistType,
 };
 use reqwest::{RequestBuilder, header::CONTENT_TYPE};
 use std::sync::Arc;
@@ -19,6 +20,7 @@ pub struct RfidState {
 
 pub async fn init(
     state: RfidState,
+    tracklist_receiver: TracklistReceiver,
     controls: Controls,
     database: Arc<Database>,
     broadcast: Arc<NotificationBroadcast>,
@@ -83,6 +85,7 @@ pub async fn init(
                     &controls,
                     &broadcast,
                     res,
+                    &tracklist_receiver,
                     rfid_server_base_address.as_deref(),
                     rfid_server_secret.as_deref(),
                 )
@@ -98,6 +101,7 @@ pub async fn handle_play_scan(
     controls: &Controls,
     broadcast: &NotificationBroadcast,
     reference_id: &str,
+    tracklist_receiver: &TracklistReceiver,
     rfid_server_base_address: Option<&str>,
     rfid_server_secret: Option<&str>,
 ) {
@@ -133,11 +137,23 @@ pub async fn handle_play_scan(
         },
     };
 
+    let tracklist = tracklist_receiver.borrow();
+    let now_playing = tracklist.list_type();
     match reference {
         ReferenceType::Album(id) => {
+            if let TracklistType::Album(now_playing) = now_playing
+                && now_playing.id == id
+            {
+                return;
+            }
             controls.play_album(&id, 0);
         }
         ReferenceType::Playlist(id) => {
+            if let TracklistType::Playlist(now_playing) = now_playing
+                && now_playing.id == id
+            {
+                return;
+            }
             controls.play_playlist(id, 0, false);
         }
     }

@@ -89,10 +89,12 @@ pub async fn run() -> AppResult<()> {
         let rfid_state = RfidState::default();
         let controls = player.controls();
         let database = database.clone();
+        let tracklist_receiver = player.tracklist();
 
         tokio::spawn(async move {
             if let Err(e) = qobuz_player_rfid::init(
                 rfid_state,
+                tracklist_receiver,
                 controls,
                 database,
                 broadcast,

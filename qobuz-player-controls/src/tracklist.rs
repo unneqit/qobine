@@ -61,16 +61,6 @@ pub struct QueueItem {
 
 impl Tracklist {
     pub fn new(list_type: TracklistType, queue: Vec<QueueItem>) -> Self {
-        // let queue = tracks
-        //     .into_iter()
-        //     .enumerate()
-        //     .map(|(i, track)| QueueItem {
-        //         track,
-        //         queue_id: i as u64,
-        //         index: i,
-        //     })
-        //     .collect();
-
         Self { queue, list_type }
     }
 

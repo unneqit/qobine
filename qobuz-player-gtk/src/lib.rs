@@ -118,7 +118,6 @@ pub fn init(
                 oauth_login_window(app, &oauth_url, login_sender.clone());
             }
 
-            
             let ui_receiver = ui_receiver
                 .borrow_mut()
                 .take()
@@ -343,8 +342,7 @@ fn setup_tracklist_listener(
     glib::MainContext::default().spawn_local(async move {
         let _keepalive = callback_handles;
 
-        while let Some(update) = receiver.recv().await
-        {
+        while let Some(update) = receiver.recv().await {
             match update {
                 UiEvent::Tracklist(tracklist) => {
                     update_now_playing(&now_playing_bar, &tracklist);
