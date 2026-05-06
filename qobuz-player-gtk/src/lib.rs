@@ -17,11 +17,10 @@ use crate::{
     callbacks::{CallbackHandles, build_callbacks},
     ui::{
         DetailPage,
-        library_page::LibraryPage,
+        app_shell::AppShell,
         now_playing_bar::{
             NowPlayingBar, update_now_playing, update_now_playing_button_icon, update_progress,
         },
-        search_page::SearchPage,
     },
 };
 
@@ -195,40 +194,16 @@ fn build_ui(
         .default_height(1000)
         .build();
 
-    let tabs = adw::ViewStack::builder().vexpand(true).build();
-
-    let view_switcher = adw::ViewSwitcher::builder()
-        .stack(&tabs)
-        .policy(adw::ViewSwitcherPolicy::Wide)
-        .build();
-
-    let header = adw::HeaderBar::builder()
-        .title_widget(&view_switcher)
-        .build();
-
-    let root_toolbar = adw::ToolbarView::new();
-    root_toolbar.add_top_bar(&header);
-    root_toolbar.set_content(Some(&tabs));
-
-    let root_page = adw::NavigationPage::builder()
-        .title("Qobuz Player")
-        .child(&root_toolbar)
-        .build();
-
     let app_nav = adw::NavigationView::new();
-    app_nav.add(&root_page);
 
     let detail_pages: Rc<RefCell<Vec<Rc<dyn DetailPage>>>> = Rc::new(RefCell::new(Vec::new()));
-
     {
         let detail_pages = detail_pages.clone();
         app_nav.connect_popped(move |_nav, popped_page| {
             let popped_ptr = popped_page.as_ptr() as usize;
-
-            detail_pages.borrow_mut().retain(|p| {
-                let page_ptr = p.page().as_ptr() as usize;
-                page_ptr != popped_ptr
-            });
+            detail_pages
+                .borrow_mut()
+                .retain(|p| p.page().as_ptr() as usize != popped_ptr);
         });
     }
 
@@ -245,32 +220,20 @@ fn build_ui(
     let on_open_artist = callback_handles.open_artist.clone();
     let on_open_playlist = callback_handles.open_playlist.clone();
 
-    let library_page = LibraryPage::new(
+    let shell = AppShell::new(
         client.clone(),
         on_open_album.clone(),
         on_open_artist.clone(),
         on_open_playlist.clone(),
     );
 
-    tabs.add_titled(library_page.widget(), Some("library"), "Library")
-        .set_icon_name(Some("audio-x-generic-symbolic"));
+    let root_page = adw::NavigationPage::builder()
+        .title("Qobuz Player")
+        .child(shell.widget())
+        .build();
+    app_nav.add(&root_page);
 
-    let search_page = SearchPage::new(
-        client.clone(),
-        on_open_album.clone(),
-        on_open_artist.clone(),
-        on_open_playlist.clone(),
-    );
-
-    tabs.add_titled(search_page.widget(), Some("search"), "Search")
-        .set_icon_name(Some("system-search-symbolic"));
-
-    let now_playing = NowPlayingBar::new(
-        controls,
-        on_open_album.clone(),
-        on_open_artist.clone(),
-        on_open_playlist.clone(),
-    );
+    let now_playing = NowPlayingBar::new(controls, on_open_album, on_open_artist, on_open_playlist);
 
     let vbox = gtk4::Box::builder()
         .orientation(gtk4::Orientation::Vertical)
@@ -279,7 +242,6 @@ fn build_ui(
     vbox.append(&now_playing.revealer);
 
     window.set_content(Some(&vbox));
-
     window.present();
 
     let tracklist_value = tracklist_receiver.borrow().clone();
@@ -292,7 +254,7 @@ fn build_ui(
         status_receiver,
         position_receiver,
         now_playing,
-        library_page,
+        shell,
         detail_pages,
         callback_handles,
         exit_sender,
@@ -307,7 +269,7 @@ fn setup_tracklist_listener(
     mut status_receiver: StatusReceiver,
     mut position_receiver: PositionReceiver,
     now_playing_bar: NowPlayingBar,
-    library_page: LibraryPage,
+    shell: AppShell,
     detail_pages: Rc<RefCell<Vec<Rc<dyn DetailPage>>>>,
     callback_handles: Rc<CallbackHandles>,
     exit_sender: ExitSender,
@@ -360,7 +322,7 @@ fn setup_tracklist_listener(
                     update_progress(&now_playing_bar, &duration);
                 }
                 UiEvent::FavoritesChanged => {
-                    library_page.reload();
+                    shell.reload();
                 }
             }
         }
