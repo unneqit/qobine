@@ -13,15 +13,19 @@ pub enum DownloadResult {
 }
 
 pub struct Downloader {
-    audio_cache_dir: PathBuf,
+    audio_cache_directory: PathBuf,
     database: Arc<Database>,
     client: Arc<Client>,
 }
 
 impl Downloader {
-    pub fn new(audio_cache_dir: PathBuf, database: Arc<Database>, client: Arc<Client>) -> Self {
+    pub fn new(
+        audio_cache_directory: PathBuf,
+        database: Arc<Database>,
+        client: Arc<Client>,
+    ) -> Self {
         Self {
-            audio_cache_dir,
+            audio_cache_directory,
             database,
             client,
         }
@@ -34,7 +38,7 @@ impl Downloader {
             track,
             &track_info.mime_type,
             track_info.sampling_rate,
-            &self.audio_cache_dir,
+            &self.audio_cache_directory,
         );
         self.database.set_cache_entry(cache_path.as_path()).await;
 
@@ -46,6 +50,10 @@ impl Downloader {
         let stream = self.client.stream_track(cache_path, track_info).await?;
 
         Ok(DownloadResult::Streaming(stream))
+    }
+
+    pub fn set_audio_cache_dir(&mut self, new_directory: PathBuf) {
+        self.audio_cache_directory = new_directory;
     }
 }
 

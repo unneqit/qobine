@@ -111,7 +111,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn set_cache_directory(&self, directory: PathBuf) -> AppResult<()> {
+    pub async fn set_cache_directory(&self, directory: &Path) -> AppResult<()> {
         let directory = directory
             .canonicalize()
             .map_err(|e| Error::StorageError {

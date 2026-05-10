@@ -97,7 +97,6 @@ pub fn init(
 
     let app_id_for_window = app_id.clone();
 
-    // TODO: use #[weak] to avoid clones?
     application.connect_activate({
         let client = client.clone();
         let database = database.clone();
@@ -179,7 +178,7 @@ pub fn init(
 
     application.run();
 
-    exit_sender.send(true).unwrap();
+    _ = exit_sender.send(true);
     Ok(())
 }
 
@@ -275,6 +274,7 @@ fn build_ui(
         detail_pages,
         callback_handles,
         exit_sender,
+        window,
     );
 }
 
@@ -290,6 +290,7 @@ fn setup_tracklist_listener(
     detail_pages: Rc<RefCell<Vec<Rc<dyn DetailPage>>>>,
     callback_handles: Rc<CallbackHandles>,
     exit_sender: ExitSender,
+    window: ApplicationWindow,
 ) {
     let mut exit_receiver = exit_sender.subscribe();
     tokio::spawn(async move {
@@ -311,7 +312,7 @@ fn setup_tracklist_listener(
                 }
                 Ok(exit) = exit_receiver.recv() => {
                     if exit {
-                        // TODO: Quit the app!
+                        sender.send(UiEvent::Exit).unwrap();
                         break;
                     }
                 }
@@ -342,6 +343,15 @@ fn setup_tracklist_listener(
                 UiEvent::FavoritesChanged => {
                     shell.reload();
                 }
+
+                UiEvent::Exit => {
+                    if let Some(app) = window.application() {
+                        app.quit();
+                    }
+
+                    window.close();
+                    break;
+                }
             }
         }
     });
@@ -352,4 +362,5 @@ enum UiEvent {
     Status(Status),
     Position(Duration),
     FavoritesChanged,
+    Exit,
 }

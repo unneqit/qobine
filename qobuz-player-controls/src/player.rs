@@ -59,7 +59,7 @@ impl Player {
         client: Arc<Client>,
         volume: f32,
         broadcast: Arc<NotificationBroadcast>,
-        audio_cache_dir: std::path::PathBuf,
+        audio_cache_directory: std::path::PathBuf,
         database: Arc<Database>,
         state_change_delay: Option<Duration>,
         sample_rate_change_delay: Option<Duration>,
@@ -68,7 +68,7 @@ impl Player {
         let (volume, volume_receiver) = watch::channel(volume);
         let sink = Sink::new(volume_receiver, preferred_device_id)?;
 
-        let downloader = Downloader::new(audio_cache_dir, database.clone(), client.clone());
+        let downloader = Downloader::new(audio_cache_directory, database.clone(), client.clone());
 
         let track_finished = sink.track_finished();
 
@@ -644,6 +644,14 @@ impl Player {
             ControlCommand::ReorderQueue { new_order } => self.reorder_queue(new_order).await?,
             ControlCommand::NewQueue { items, play } => self.new_track_queue(items, play).await?,
             ControlCommand::ClearQueue => self.clear_queue().await?,
+            ControlCommand::SetAudioCacheDirectory { new_directory } => {
+                self.database.set_cache_directory(&new_directory).await?;
+                self.downloader.set_audio_cache_dir(new_directory);
+            }
+            ControlCommand::SetMaxAudioQuality { new_quality } => {
+                self.database.set_max_audio_quality(new_quality).await?;
+                self.client.set_max_audio_quality(new_quality).await;
+            }
         }
         Ok(())
     }

@@ -1,4 +1,6 @@
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
+
+use qobuz_player_client::client::AudioQuality;
 
 #[derive(Debug)]
 pub enum ControlCommand {
@@ -56,6 +58,13 @@ pub enum ControlCommand {
         play: bool,
     },
     ClearQueue,
+    // TODO: Consider add a separate "Preferences" command
+    SetMaxAudioQuality {
+        new_quality: AudioQuality,
+    },
+    SetAudioCacheDirectory {
+        new_directory: PathBuf,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -187,6 +196,18 @@ impl Controls {
     pub fn clear_queue(&self) {
         self.tx
             .send(ControlCommand::ClearQueue)
+            .expect("infallible");
+    }
+
+    pub fn set_audio_max_quality(&self, new_quality: AudioQuality) {
+        self.tx
+            .send(ControlCommand::SetMaxAudioQuality { new_quality })
+            .expect("infallible");
+    }
+
+    pub fn set_audio_cache_directory(&self, new_directory: PathBuf) {
+        self.tx
+            .send(ControlCommand::SetAudioCacheDirectory { new_directory })
             .expect("infallible");
     }
 }

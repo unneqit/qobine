@@ -103,17 +103,12 @@ fn preferences_page(
     page.add(&cache_group(
         app,
         database.clone(),
+        controls.clone(),
         exit_sender.clone(),
         audio_cache_ttl_sender,
         &configuration,
     ));
-    page.add(&audio_group(
-        controls,
-        database,
-        volume_receiver,
-        exit_sender.clone(),
-        &configuration,
-    ));
+    page.add(&audio_group(controls, volume_receiver, &configuration));
     page.add(&logout_group(exit_sender));
 
     page
@@ -122,6 +117,7 @@ fn preferences_page(
 fn cache_group(
     app: &adw::Application,
     database: Arc<Database>,
+    controls: Controls,
     exit_sender: ExitSender,
     audio_cache_ttl_sender: mpsc::Sender<u32>,
     configuration: &Configuration,
@@ -149,8 +145,8 @@ fn cache_group(
             row,
             #[strong]
             initial_cache_dir,
-            #[weak]
-            database,
+            #[strong]
+            controls,
             #[strong]
             exit_sender,
             move |_| {
@@ -168,8 +164,8 @@ fn cache_group(
                     glib::clone!(
                         #[weak]
                         row,
-                        #[weak]
-                        database,
+                        #[strong]
+                        controls,
                         #[strong]
                         exit_sender,
                         move |result| {
@@ -177,9 +173,7 @@ fn cache_group(
                                 && let Some(path) = folder.path()
                             {
                                 row.set_subtitle(&path.display().to_string());
-                                // TODO: Confirm box
-                                // TODO: Instead of exit, respawn clean up
-                                block_on(database.set_cache_directory(path)).unwrap();
+                                controls.set_audio_cache_directory(path);
                                 exit_sender.send(true).unwrap();
                             }
                         }
@@ -190,7 +184,11 @@ fn cache_group(
     });
 
     group.add(&row);
-    group.add(&cache_ttl_row(database, audio_cache_ttl_sender));
+    group.add(&cache_ttl_row(
+        database,
+        audio_cache_ttl_sender,
+        configuration,
+    ));
 
     group
 }
@@ -198,21 +196,41 @@ fn cache_group(
 fn cache_ttl_row(
     database: Arc<Database>,
     audio_cache_ttl_sender: mpsc::Sender<u32>,
+    configuration: &Configuration,
 ) -> adw::ComboRow {
     let row = adw::ComboRow::new();
     row.set_title("Cache time to live");
 
-    let model = gtk::StringList::new(&["Disabled", "1 hour", "1 month", "3 months"]);
+    let mut options = vec!["Disabled", "1 hour", "1 month", "3 months"];
+
+    let ttl = configuration.cache_ttl_hours;
+
+    // 1 month = 720 hours
+    // 3 moths = 2160 hours
+
+    if ttl != 0 || ttl != 1 || ttl != 720 || ttl != 2160 {
+        options.push("Other");
+    }
+
+    let selected = match ttl {
+        0 => 0,
+        1 => 1,
+        720 => 2,
+        2160 => 3,
+        _ => 4,
+    };
+
+    let model = gtk::StringList::new(&options);
 
     row.set_model(Some(&model));
-    row.set_selected(0);
+    row.set_selected(selected);
 
     row.connect_selected_notify(move |r| {
         let hours = match r.selected() {
             0 => 0,
             1 => 1,
-            2 => 24 * 30,
-            3 => 24 * 90,
+            2 => 720,
+            3 => 2160,
             _ => 0,
         };
         block_on(database.set_cache_ttl_hours(hours)).unwrap();
@@ -224,9 +242,7 @@ fn cache_ttl_row(
 
 fn audio_group(
     controls: Controls,
-    database: Arc<Database>,
     volume_receiver: VolumeReceiver,
-    exit_sender: ExitSender,
     configuration: &Configuration,
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::new();
@@ -251,18 +267,19 @@ fn audio_group(
 
     quality.set_model(Some(&model));
 
-    quality.connect_selected_notify(move |r| {
-        let value = match r.selected() {
-            0 => AudioQuality::Mp3,
-            1 => AudioQuality::CD,
-            2 => AudioQuality::HIFI96,
-            3 => AudioQuality::HIFI192,
-            _ => AudioQuality::HIFI192,
-        };
-        // TODO: Confirm box
-        block_on(database.set_max_audio_quality(value)).unwrap();
-        // TODO: Instead of exit, update the player. Easy
-        exit_sender.send(true).unwrap();
+    quality.connect_selected_notify({
+        let controls = controls.clone();
+
+        move |r| {
+            let value = match r.selected() {
+                0 => AudioQuality::Mp3,
+                1 => AudioQuality::CD,
+                2 => AudioQuality::HIFI96,
+                3 => AudioQuality::HIFI192,
+                _ => AudioQuality::HIFI192,
+            };
+            controls.set_audio_max_quality(value);
+        }
     });
 
     group.add(&quality);

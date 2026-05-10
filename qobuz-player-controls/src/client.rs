@@ -38,7 +38,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 pub struct Client {
     qobuz_client: OnceCell<RwLock<QobuzClient>>,
     credentials: Mutex<Option<Credentials>>,
-    max_audio_quality: AudioQuality,
+    max_audio_quality: RwLock<AudioQuality>,
     favorites_cache: SimpleCache<Favorites>,
     featured_albums_cache: SimpleCache<Vec<(String, Vec<AlbumSimple>)>>,
     featured_playlists_cache: SimpleCache<Vec<(String, Vec<Playlist>)>>,
@@ -115,6 +115,7 @@ impl Client {
             .build();
 
         let credentials = Mutex::new(credentials);
+        let max_audio_quality = RwLock::new(max_audio_quality);
 
         Self {
             qobuz_client: Default::default(),
@@ -143,10 +144,12 @@ impl Client {
             });
         };
 
+        let max_audio_quality = self.max_audio_quality.read().await;
+
         let client = QobuzClient::new(
             &credentials.user_auth_token,
             credentials.user_id,
-            self.max_audio_quality,
+            *max_audio_quality,
         )
         .await?;
 
@@ -177,6 +180,11 @@ impl Client {
         Ok(cell.write().await)
     }
 
+    pub async fn set_max_audio_quality(&self, new_quality: AudioQuality) {
+        let mut max_audio_quality = self.max_audio_quality.write().await;
+        *max_audio_quality = new_quality;
+    }
+
     pub async fn track_url(&self, track_id: u32) -> Result<TrackInfo> {
         let mut client = self.get_client_mut().await?;
         let info = client.track_url(track_id).await?;
@@ -200,7 +208,7 @@ impl Client {
 
         let client = self.get_client().await?;
         let album = client.album(id).await?;
-        let album = parse_album(album, &self.max_audio_quality);
+        let album = parse_album(album, &*self.max_audio_quality.read().await);
 
         self.album_cache.insert(id.to_string(), album.clone()).await;
 
@@ -216,7 +224,7 @@ impl Client {
         let results = client.search_all(&query, 20).await?;
         let user_id = self.get_client().await?.user_id();
 
-        let out = parse_search_results(results, user_id, &self.max_audio_quality);
+        let out = parse_search_results(results, user_id, &*self.max_audio_quality.read().await);
 
         self.search_cache.insert(query, out.clone()).await;
         Ok(out)
@@ -238,26 +246,28 @@ impl Client {
             client.similar_artists(id, None),
         )?;
 
+        let audio_quality = self.max_audio_quality.read().await;
+
         let artist = parse_artist_page(
             artist,
             albums
                 .items
                 .into_iter()
-                .map(|x| parse_album_simple(x, &self.max_audio_quality))
+                .map(|x| parse_album_simple(x, &audio_quality))
                 .collect(),
             singles
                 .items
                 .into_iter()
-                .map(|x| parse_album_simple(x, &self.max_audio_quality))
+                .map(|x| parse_album_simple(x, &audio_quality))
                 .collect(),
             live.items
                 .into_iter()
-                .map(|x| parse_album_simple(x, &self.max_audio_quality))
+                .map(|x| parse_album_simple(x, &audio_quality))
                 .collect(),
             compilations
                 .items
                 .into_iter()
-                .map(|x| parse_album_simple(x, &self.max_audio_quality))
+                .map(|x| parse_album_simple(x, &audio_quality))
                 .collect(),
             similar_artists
                 .artists
@@ -280,7 +290,7 @@ impl Client {
     pub async fn track(&self, id: u32) -> Result<Track> {
         let client = self.get_client().await?;
         let track = client.track(id).await?;
-        let track = parse_track(track, &self.max_audio_quality);
+        let track = parse_track(track, &*self.max_audio_quality.read().await);
         Ok(track)
     }
 
@@ -290,12 +300,13 @@ impl Client {
         }
 
         let client = self.get_client().await?;
+        let audio_quality = self.max_audio_quality.read().await;
         let suggested_albums = client.suggested_albums(id).await?;
         let suggested_albums: Vec<_> = suggested_albums
             .albums
             .items
             .into_iter()
-            .map(|x| parse_album_simple(x, &self.max_audio_quality))
+            .map(|x| parse_album_simple(x, &audio_quality))
             .collect();
 
         self.suggested_albums_cache
@@ -386,13 +397,14 @@ impl Client {
         }
 
         let client = self.get_client().await?;
+        let audio_quality = self.max_audio_quality.read().await;
         let editor_picks = client
             .featured_playlists(FeaturedPlaylistType::EditorsPick)
             .await?
             .playlists
             .items
             .into_iter()
-            .map(|x| parse_playlist(x, client.user_id(), &self.max_audio_quality))
+            .map(|x| parse_playlist(x, client.user_id(), &audio_quality))
             .collect();
 
         let playlists = vec![("Editor picks".to_string(), editor_picks)];
@@ -409,7 +421,11 @@ impl Client {
 
         let client = self.get_client().await?;
         let playlist = client.playlist(id).await?;
-        let playlist = parse_playlist(playlist, client.user_id(), &self.max_audio_quality);
+        let playlist = parse_playlist(
+            playlist,
+            client.user_id(),
+            &*self.max_audio_quality.read().await,
+        );
 
         self.playlist_cache.insert(id, playlist.clone()).await;
         Ok(playlist)
@@ -477,6 +493,7 @@ impl Client {
         }
 
         let client = self.get_client().await?;
+        let audio_quality = self.max_audio_quality.read().await;
 
         let favorites_result = client.favorites(1000).await?;
         let user_playlists = client.user_playlists().await?;
@@ -485,7 +502,7 @@ impl Client {
             .albums
             .items
             .into_iter()
-            .map(|x| parse_album(x, &self.max_audio_quality).into())
+            .map(|x| parse_album(x, &audio_quality).into())
             .collect();
 
         albums.sort_by(|a: &AlbumSimple, b| {
@@ -507,7 +524,7 @@ impl Client {
             .playlists
             .items
             .into_iter()
-            .map(|x| parse_playlist(x, client.user_id(), &self.max_audio_quality))
+            .map(|x| parse_playlist(x, client.user_id(), &audio_quality))
             .collect();
 
         playlists.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
@@ -516,7 +533,7 @@ impl Client {
             .tracks
             .items
             .into_iter()
-            .map(|x| parse_track(x, &self.max_audio_quality))
+            .map(|x| parse_track(x, &audio_quality))
             .collect();
 
         tracks.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
@@ -543,7 +560,11 @@ impl Client {
         let playlist = client
             .create_playlist(name, is_public, description, is_collaborative)
             .await?;
-        let playlist = parse_playlist(playlist, client.user_id(), &self.max_audio_quality);
+        let playlist = parse_playlist(
+            playlist,
+            client.user_id(),
+            &*self.max_audio_quality.read().await,
+        );
         let cache = self.favorites_cache.get().await;
 
         if let Some(mut cache) = cache {
