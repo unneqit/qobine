@@ -103,7 +103,6 @@ fn preferences_page(
     page.add(&cache_group(
         app,
         controls.clone(),
-        exit_sender.clone(),
         audio_cache_ttl_sender,
         &configuration,
     ));
@@ -116,7 +115,6 @@ fn preferences_page(
 fn cache_group(
     app: &adw::Application,
     controls: Controls,
-    exit_sender: ExitSender,
     audio_cache_ttl_sender: mpsc::UnboundedSender<u32>,
     configuration: &Configuration,
 ) -> adw::PreferencesGroup {
@@ -135,7 +133,6 @@ fn cache_group(
     row.set_activatable(true);
 
     row.connect_activated({
-        let exit_sender = exit_sender.clone();
         glib::clone!(
             #[weak]
             app,
@@ -145,8 +142,6 @@ fn cache_group(
             initial_cache_dir,
             #[strong]
             controls,
-            #[strong]
-            exit_sender,
             move |_| {
                 let file_dialog = gtk::FileDialog::builder()
                     .title("Select cache directory")
@@ -164,15 +159,12 @@ fn cache_group(
                         row,
                         #[strong]
                         controls,
-                        #[strong]
-                        exit_sender,
                         move |result| {
                             if let Ok(folder) = result
                                 && let Some(path) = folder.path()
                             {
                                 row.set_subtitle(&path.display().to_string());
                                 controls.set_audio_cache_directory(path);
-                                exit_sender.send(true).unwrap();
                             }
                         }
                     ),
