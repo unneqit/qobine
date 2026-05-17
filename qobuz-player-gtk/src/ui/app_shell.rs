@@ -485,10 +485,6 @@ impl AppShell {
     pub fn tracklist_updated(&self, tracklist: &Tracklist) {
         self.queue_page.load(tracklist);
     }
-
-    pub fn owned_playlists_changed(&self, owned_playlists: Vec<PlaylistSimple>) {
-        self.queue_page.owned_playlists_changed(owned_playlists);
-    }
 }
 
 #[allow(clippy::too_many_arguments)]
