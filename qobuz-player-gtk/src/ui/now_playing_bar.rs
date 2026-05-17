@@ -132,7 +132,6 @@ impl NowPlayingBar {
 
         let cover = gtk4::Image::builder().pixel_size(130).build();
         let cover_frame = gtk4::Frame::builder().child(&cover).build();
-        cover_frame.add_css_class("card");
 
         let content = gtk4::Box::builder()
             .orientation(gtk4::Orientation::Horizontal)

@@ -62,7 +62,6 @@ pub fn build_album_tile(album: &AlbumSimple) -> adw::Bin {
     let cover = gtk::Image::builder().pixel_size(200).build();
     set_image_from_url(Some(&album.image), &cover);
     let cover_frame = gtk::Frame::builder().child(&cover).build();
-    cover_frame.add_css_class("card");
 
     let title = gtk::Label::builder()
         .label(&album.title)
@@ -101,7 +100,6 @@ pub fn build_playlist_tile(playlist: &PlaylistSimple) -> adw::Bin {
     let cover = gtk::Image::builder().pixel_size(200).build();
     set_image_from_url(playlist.image.as_deref(), &cover);
     let cover_frame = gtk::Frame::builder().child(&cover).build();
-    cover_frame.add_css_class("card");
 
     let title = gtk::Label::builder()
         .label(&playlist.title)
@@ -131,7 +129,6 @@ pub fn build_artist_tile(artist: &Artist) -> adw::Bin {
     let cover = gtk::Image::builder().pixel_size(200).build();
     set_image_from_url(artist.image.as_deref(), &cover);
     let cover_frame = gtk::Frame::builder().child(&cover).build();
-    cover_frame.add_css_class("card");
 
     let title = gtk::Label::builder()
         .label(&artist.name)
@@ -233,8 +230,6 @@ pub fn build_track_row(
             set_image_from_url(track.image.as_deref(), &cover);
 
             let cover_frame = gtk::Frame::builder().child(&cover).build();
-
-            cover_frame.add_css_class("card");
             track_row_box.append(&cover_frame);
         }
         false => {
@@ -334,7 +329,7 @@ pub fn build_track_row(
         }
     }
 
-    menu.append_section(Some("Add to playlist"), &playlist_section);
+    menu.append_submenu(Some("Add to playlist"), &playlist_section);
 
     let action_group = gio::SimpleActionGroup::new();
 

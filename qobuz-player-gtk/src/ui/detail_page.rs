@@ -29,7 +29,6 @@ pub fn build_detail_header(
 
     let cover_frame = gtk::Frame::builder()
         .valign(gtk::Align::End)
-        .css_classes(vec!["card"])
         .child(&cover)
         .build();
 
@@ -64,7 +63,7 @@ pub fn build_detail_header(
     menu.append(Some("Play next"), Some("tracks.play-next"));
 
     let playlist_section = gio::Menu::new();
-    menu.append_section(Some("Add to playlist"), &playlist_section);
+    menu.append_submenu(Some("Add to playlist"), &playlist_section);
 
     let action_group = gio::SimpleActionGroup::new();
 
