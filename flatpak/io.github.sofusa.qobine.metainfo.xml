@@ -8,11 +8,15 @@
   <description>
     <p>Listening to your Qobuz music with Qobine: an Adwaita Qobuz client designed for GNOME.</p>
     <p>Upon first launch, a browser spawns where you will need to login to Qobuz with your active streaming subscription.</p>
-    <p>Qobine is currently very mininal in terms of features, but more will follow.</p>
+
+    <p>Qobine supports full Qobuz audio quality. But make sure that your pipewire configuration is correct.</p>
+
     <ul>
       <li>View and stream your favorite albums, artists and playlists</li>
       <li>Search the full Qobuz catalogue</li>
       <li>Add / remove favorites</li>
+      <li>Add to queue / play next</li>
+      <li>Create / edit / delete playlists</li>
     </ul>
   </description>
 
@@ -22,6 +26,18 @@
   <screenshots>
     <screenshot type="default">
       <image>https://github.com/SofusA/qobine/blob/main/assets/qobuz-player-gtk.png?raw=true</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/SofusA/qobine/blob/main/assets/qobine-album.png?raw=true</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/SofusA/qobine/blob/main/assets/qobine-artist.png?raw=true</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/SofusA/qobine/blob/main/assets/qobine-playlist.png?raw=true</image>
+    </screenshot>
+    <screenshot>
+      <image>https://github.com/SofusA/qobine/blob/main/assets/qobine-queue.png?raw=true</image>
     </screenshot>
   </screenshots>
 
@@ -48,6 +64,12 @@
   <url type="vcs-browser">https://github.com/SofusA/qobine/qobuz-player-gtk</url>
 
   <releases>
+    <release version="2026-05-18" date="2026-05-18">
+      <description>
+        <p>Added playlist operations</p>
+        <p>Added queue operations</p>
+      </description>
+    </release>
     <release version="2026-05-11" date="2026-05-11">
       <url type="details">https://github.com/SofusA/qobine/releases/tag/v2026-05-11</url>
       <description>
