@@ -37,6 +37,7 @@ pub struct PlaylistDetailPage {
     cover: gtk4::Image,
     title: gtk4::Label,
     meta: gtk4::Label,
+    owner: gtk4::Label,
     playlist_menu: gio::Menu,
     delete_button: gtk4::Button,
     favorite_button: gtk4::Button,
@@ -70,6 +71,8 @@ impl PlaylistDetailPage {
             .wrap(true)
             .css_classes(vec!["dim-label"])
             .build();
+
+        let owner = gtk4::Label::builder().wrap(true).build();
 
         let play_button = gtk4::Button::builder()
             .label("Play")
@@ -159,7 +162,11 @@ impl PlaylistDetailPage {
             controls.clone(),
             ui_event_sender.clone(),
             300,
-            vec![title.clone().upcast(), meta.clone().upcast()],
+            vec![
+                title.clone().upcast(),
+                owner.clone().upcast(),
+                meta.clone().upcast(),
+            ],
             vec![
                 play_button.clone().upcast(),
                 shuffle_button.clone().upcast(),
@@ -208,6 +215,7 @@ impl PlaylistDetailPage {
             delete_button,
             tracks: Default::default(),
             favorite_button,
+            owner,
         };
 
         s.load_playlist();
@@ -230,6 +238,7 @@ impl PlaylistDetailPage {
         let cover = self.cover.clone();
         let title = self.title.clone();
         let meta = self.meta.clone();
+        let owner = self.owner.clone();
         let tracks_list = self.tracks_list.clone();
         let tracklist_receiver = self.tracklist_receiver.clone();
         let current_playing_index = self.current_selected_index.clone();
@@ -249,6 +258,7 @@ impl PlaylistDetailPage {
 
                     let dur_str = format_time(playlist.duration_seconds);
                     meta.set_label(&dur_str.to_string());
+                    owner.set_label(&format!("By {}", playlist.owner.name));
 
                     set_image_from_url(playlist.image.as_deref(), &cover);
 

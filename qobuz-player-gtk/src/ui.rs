@@ -153,11 +153,13 @@ pub fn clickable_tile<F>(child: &gtk::Widget, on_click: F) -> gtk::Button
 where
     F: Fn() + 'static,
 {
-    let button = gtk::Button::builder().child(child).build();
+    let button = gtk::Button::builder()
+        .child(child)
+        .css_classes(vec!["flat"])
+        .focus_on_click(false)
+        .has_frame(false)
+        .build();
 
-    button.set_has_frame(false);
-    button.add_css_class("flat");
-    button.set_focus_on_click(false);
     button.connect_clicked(move |_| on_click());
 
     button
