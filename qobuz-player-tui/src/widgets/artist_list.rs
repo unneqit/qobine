@@ -99,6 +99,20 @@ impl ArtistList {
                 Ok(Output::UpdateFavorites)
             }
 
+            KeyCode::Char('i') => {
+                let index = self.items.state.selected();
+
+                let id = index
+                    .and_then(|index| self.items.filter().get(index))
+                    .map(|artist| artist.id);
+
+                if let Some(id) = id {
+                    let artist = client.artist_page(id).await?;
+                    return Ok(Output::Popup(Popup::ArtistInfo(artist)));
+                }
+                Ok(Output::Consumed)
+            }
+
             KeyCode::Enter => {
                 let index = self.items.state.selected();
                 let selected = index.and_then(|index| self.items.filter().get(index));

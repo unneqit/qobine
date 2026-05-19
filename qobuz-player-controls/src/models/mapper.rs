@@ -258,7 +258,6 @@ pub fn parse_playlist(
         is_owned: user_id == playlist.owner.id,
         title: playlist.name,
         duration_seconds: playlist.duration as u32,
-        tracks_count: playlist.tracks_count as u32,
         image,
         tracks,
         owner: playlist.owner,

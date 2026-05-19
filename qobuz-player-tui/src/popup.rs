@@ -2,7 +2,7 @@ use qobuz_player_controls::{
     AppResult,
     client::Client,
     controls::Controls,
-    models::{Album, Artist, Playlist, PlaylistSimple, Track},
+    models::{Album, Artist, ArtistPage, Playlist, PlaylistSimple, Track},
 };
 use ratatui::{
     crossterm::event::{Event, KeyCode, KeyEventKind},
@@ -13,7 +13,7 @@ use tui_input::{Input, backend::crossterm::EventHandler};
 
 use crate::{
     app::{NotificationList, Output},
-    ui::{block, center, centered_rect_fixed, render_input, tab_bar},
+    ui::{block, center, centered_rect_fixed, format_seconds, render_input, tab_bar},
     widgets::{
         album_list::AlbumList,
         playlist_list::PlaylistList,
@@ -293,6 +293,10 @@ pub enum Popup {
     Track(TrackPopupState),
     NewPlaylist(NewPlaylistPopupState),
     DeletePlaylist(DeletePlaylistPopupState),
+    AlbumInfo(Album, bool),
+    ArtistInfo(ArtistPage),
+    PlaylistInfo(Playlist),
+    TrackInfo(Track),
 }
 
 impl Popup {
@@ -436,6 +440,18 @@ impl Popup {
                 frame.render_widget(Clear, area);
                 frame.render_widget(tabs, area);
             }
+            Popup::AlbumInfo(album, currently_playing) => {
+                render_album_info(frame, album, *currently_playing);
+            }
+            Popup::ArtistInfo(artist) => {
+                render_artist_info(frame, artist);
+            }
+            Popup::PlaylistInfo(playlist) => {
+                render_playlist_info(frame, playlist);
+            }
+            Popup::TrackInfo(track) => {
+                render_track_info(frame, track);
+            }
         };
     }
 
@@ -448,6 +464,10 @@ impl Popup {
     ) -> AppResult<Output> {
         match event {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => match self {
+                Popup::AlbumInfo(_, _) => Ok(Output::Consumed),
+                Popup::ArtistInfo(_) => Ok(Output::Consumed),
+                Popup::PlaylistInfo(_) => Ok(Output::Consumed),
+                Popup::TrackInfo(_) => Ok(Output::Consumed),
                 Popup::Album(album_state) => {
                     album_state
                         .tracks
@@ -666,4 +686,222 @@ impl Popup {
             _ => Ok(Output::Consumed),
         }
     }
+}
+
+fn render_album_info(frame: &mut Frame, album: &Album, currently_playing: bool) {
+    let mut info_lines: Vec<Line> = Vec::new();
+
+    info_lines.push(Line::from(album.title.clone()).style(Style::new().bold()));
+    info_lines.push(Line::from(album.artist.name.clone()));
+    info_lines.push(Line::from(""));
+
+    if album.release_year > 0 {
+        info_lines.push(Line::from(format!("Year:     {}", album.release_year)));
+    }
+
+    info_lines.push(Line::from(format!("Tracks:   {}", album.total_tracks)));
+    info_lines.push(Line::from(format!(
+        "Duration: {}",
+        format_seconds(album.duration_seconds)
+    )));
+
+    if album.hires_available {
+        info_lines.push(Line::from("Quality:  Hi-Res"));
+    }
+
+    if album.explicit {
+        info_lines.push(Line::from("Explicit: Yes"));
+    }
+
+    let info_height = info_lines.len() as u16;
+
+    let box_width = frame.area().width / 2;
+    let inner_width = box_width.saturating_sub(2);
+
+    let desc_height = if let Some(description) = &album.description {
+        let char_count = description.len() as u16;
+        let lines_needed = char_count.div_ceil(inner_width.max(1));
+        1 + lines_needed // 1 for blank separator line
+    } else {
+        0
+    };
+
+    let total_height = info_height + desc_height + 2;
+
+    let width = Constraint::Length(box_width);
+    let height = Constraint::Length(total_height);
+    let area = center(frame.area(), width, height);
+    let title = match currently_playing {
+        true => "Currently playing album info",
+        false => "Album info",
+    };
+    let outer_block = block(Some(title));
+    let inner = outer_block.inner(area);
+
+    frame.render_widget(Clear, area);
+    frame.render_widget(outer_block, area);
+
+    let vertical =
+        Layout::vertical([Constraint::Length(info_height), Constraint::Min(0)]).split(inner);
+
+    let top_area = vertical[0];
+    let desc_area = vertical[1];
+
+    let horizontal = Layout::horizontal([Constraint::Min(1)]).split(top_area);
+
+    let info_paragraph = Paragraph::new(Text::from(info_lines));
+    frame.render_widget(info_paragraph, horizontal[0]);
+
+    if let Some(description) = &album.description {
+        let desc_lines = vec![Line::from(""), Line::from(description.clone())];
+        let desc_paragraph = Paragraph::new(Text::from(desc_lines)).wrap(Wrap { trim: false });
+        frame.render_widget(desc_paragraph, desc_area);
+    }
+}
+
+fn render_artist_info(frame: &mut Frame, artist: &ArtistPage) {
+    let mut info_lines: Vec<Line> = Vec::new();
+
+    info_lines.push(Line::from(artist.name.clone()).style(Style::new().bold()));
+    info_lines.push(Line::from(""));
+    info_lines.push(Line::from(format!("Albums:  {}", artist.albums.len())));
+
+    let info_height = info_lines.len() as u16;
+
+    let box_width = frame.area().width / 2;
+    let inner_width = box_width.saturating_sub(2);
+
+    let desc_height = if let Some(description) = &artist.description {
+        let char_count = description.len() as u16;
+        let lines_needed = char_count.div_ceil(inner_width.max(1));
+        1 + lines_needed
+    } else {
+        0
+    };
+
+    let total_height = info_height + desc_height + 2;
+
+    let width = Constraint::Length(box_width);
+    let height = Constraint::Length(total_height);
+    let area = center(frame.area(), width, height);
+
+    let title = "Artist info";
+
+    let outer_block = block(Some(title));
+    let inner = outer_block.inner(area);
+
+    frame.render_widget(Clear, area);
+    frame.render_widget(outer_block, area);
+
+    let vertical =
+        Layout::vertical([Constraint::Length(info_height), Constraint::Min(0)]).split(inner);
+
+    let top_area = vertical[0];
+    let desc_area = vertical[1];
+
+    let horizontal = Layout::horizontal([Constraint::Min(1)]).split(top_area);
+
+    let info_paragraph = Paragraph::new(Text::from(info_lines));
+    frame.render_widget(info_paragraph, horizontal[0]);
+
+    if let Some(description) = &artist.description {
+        let desc_lines = vec![Line::from(""), Line::from(description.clone())];
+        let desc_paragraph = Paragraph::new(Text::from(desc_lines)).wrap(Wrap { trim: false });
+        frame.render_widget(desc_paragraph, desc_area);
+    }
+}
+
+fn render_track_info(frame: &mut Frame, track: &Track) {
+    let mut info_lines: Vec<Line> = Vec::new();
+
+    info_lines.push(Line::from(track.title.clone()).style(Style::new().bold()));
+
+    let artist_name = track
+        .artist_name
+        .clone()
+        .unwrap_or_else(|| "Unknown artist".to_string());
+
+    let album_title = track
+        .album_title
+        .clone()
+        .unwrap_or_else(|| "Unknown album".to_string());
+
+    info_lines.push(Line::from(artist_name));
+    info_lines.push(Line::from(album_title));
+    info_lines.push(Line::from(""));
+
+    info_lines.push(Line::from(format!(
+        "Duration seconds: {}",
+        track.duration_seconds
+    )));
+
+    info_lines.push(Line::from(format!(
+        "Duration:         {}",
+        format_seconds(track.duration_seconds)
+    )));
+
+    info_lines.push(Line::from(format!(
+        "Explicit:         {}",
+        if track.explicit { "Yes" } else { "No" }
+    )));
+
+    info_lines.push(Line::from(format!(
+        "Hi-Res:           {}",
+        if track.hires_available { "Yes" } else { "No" }
+    )));
+
+    let info_height = info_lines.len() as u16;
+
+    let box_width = frame.area().width / 2;
+    let total_height = info_height + 2;
+
+    let width = Constraint::Length(box_width);
+    let height = Constraint::Length(total_height);
+    let area = center(frame.area(), width, height);
+
+    let title = "Track info";
+
+    let outer_block = block(Some(title));
+    let inner = outer_block.inner(area);
+
+    frame.render_widget(Clear, area);
+    frame.render_widget(outer_block, area);
+
+    let info_paragraph = Paragraph::new(Text::from(info_lines));
+    frame.render_widget(info_paragraph, inner);
+}
+
+fn render_playlist_info(frame: &mut Frame, playlist: &Playlist) {
+    let mut info_lines: Vec<Line> = Vec::new();
+
+    info_lines.push(Line::from(playlist.title.clone()).style(Style::new().bold()));
+    info_lines.push(Line::from(playlist.owner.name.clone()));
+    info_lines.push(Line::from(""));
+
+    info_lines.push(Line::from(format!("Tracks:   {}", playlist.tracks.len())));
+
+    info_lines.push(Line::from(format!(
+        "Duration: {}",
+        format_seconds(playlist.duration_seconds)
+    )));
+
+    let info_height = info_lines.len() as u16;
+
+    let box_width = frame.area().width / 2;
+    let total_height = info_height + 2;
+
+    let width = Constraint::Length(box_width);
+    let height = Constraint::Length(total_height);
+    let area = center(frame.area(), width, height);
+
+    let title = "Playlist info";
+
+    let outer_block = block(Some(title));
+    let inner = outer_block.inner(area);
+
+    frame.render_widget(Clear, area);
+    frame.render_widget(outer_block, area);
+
+    let info_paragraph = Paragraph::new(Text::from(info_lines));
+    frame.render_widget(info_paragraph, inner);
 }

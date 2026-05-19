@@ -139,6 +139,21 @@ impl AlbumList {
                 Ok(Output::Consumed)
             }
 
+            KeyCode::Char('i') => {
+                let index = self.items.state.selected();
+
+                let id = index
+                    .and_then(|index| self.items.filter().get(index))
+                    .map(|album| album.id.clone());
+
+                if let Some(id) = id {
+                    let album = client.album(&id).await?;
+
+                    return Ok(Output::Popup(Popup::AlbumInfo(album, false)));
+                }
+                Ok(Output::Consumed)
+            }
+
             KeyCode::Enter => {
                 let index = self.items.state.selected();
 

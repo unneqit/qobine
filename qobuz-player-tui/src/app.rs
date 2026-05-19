@@ -15,7 +15,7 @@ use qobuz_player_controls::{
     AppResult, PositionReceiver, Status, StatusReceiver, TracklistReceiver,
     client::Client,
     controls::Controls,
-    models::{Album, Track},
+    models::Track,
     notification::{Notification, NotificationBroadcast},
     tracklist::{Tracklist, TracklistType},
 };
@@ -77,7 +77,7 @@ pub enum AppState {
     Normal,
     Popup(Vec<Popup>),
     Help,
-    AlbumInfo(Album),
+    // AlbumInfo(Album),
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -312,7 +312,7 @@ impl App {
                     self.app_state = AppState::Help;
                     self.should_draw = true;
                 }
-                KeyCode::Char('i') => {
+                KeyCode::Char('I') => {
                     if let Some(album_id) = self
                         .now_playing
                         .playing_track
@@ -320,7 +320,14 @@ impl App {
                         .and_then(|t| t.album_id.clone())
                         && let Ok(album) = self.client.album(&album_id).await
                     {
-                        self.app_state = AppState::AlbumInfo(album);
+                        let popup = Popup::AlbumInfo(album, true);
+                        let mut popups = match std::mem::take(&mut self.app_state) {
+                            AppState::Popup(popups) => popups,
+                            _ => Vec::new(),
+                        };
+
+                        popups.push(popup);
+                        self.app_state = AppState::Popup(popups);
                         self.should_draw = true;
                     }
                 }
@@ -450,7 +457,7 @@ impl App {
         match event {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 match &mut self.app_state {
-                    AppState::Help | AppState::AlbumInfo(_) => {
+                    AppState::Help => {
                         self.app_state = AppState::Normal;
                         self.should_draw = true;
                         return Ok(());

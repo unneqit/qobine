@@ -12,6 +12,7 @@ use ratatui::{
 
 use crate::{
     app::{FilteredListState, NotificationList, Output},
+    popup::Popup,
     ui::{COLUMN_SPACING, HIGHLIGHT_STYLE, format_duration, mark_explicit_and_hifi},
 };
 
@@ -164,6 +165,19 @@ impl TrackList {
             KeyCode::Char('S') => {
                 let ids = self.filter().iter().map(|x| x.id).collect();
                 controls.play_tracks(ids, true);
+                Ok(Output::Consumed)
+            }
+
+            KeyCode::Char('i') => {
+                let index = self.items.state.selected();
+
+                let track = index
+                    .and_then(|index| self.items.filter().get(index))
+                    .cloned();
+
+                if let Some(track) = track {
+                    return Ok(Output::Popup(Popup::TrackInfo(track)));
+                }
                 Ok(Output::Consumed)
             }
 
