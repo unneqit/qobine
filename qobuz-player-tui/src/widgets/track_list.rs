@@ -50,8 +50,28 @@ impl TrackList {
         self.items.state.select(Some(0));
     }
 
+    pub fn select_index(&mut self, index: usize) {
+        self.items.state.select(Some(index));
+    }
+
     pub fn set_all_items(&mut self, items: Vec<Track>) {
         self.items.set_all_items(items);
+    }
+
+    pub fn selected(&self) -> Option<usize> {
+        self.items.state.selected()
+    }
+
+    pub fn get(&self, index: usize) -> Option<&Track> {
+        self.items.filter().get(index)
+    }
+
+    pub fn remove_at_index(&mut self, index: usize) {
+        self.items.remove_at_index(index);
+    }
+
+    pub fn move_index_to_new_index(&mut self, index: usize, new_index: usize) {
+        self.items.move_index_to_new_index(index, new_index);
     }
 
     pub fn filter(&self) -> &Vec<Track> {
@@ -126,7 +146,7 @@ impl TrackList {
                 Ok(Output::Consumed)
             }
 
-            KeyCode::Char('D') => {
+            KeyCode::Char('U') => {
                 let index = self.items.state.selected();
                 let selected = index.and_then(|index| self.items.filter().get(index));
 

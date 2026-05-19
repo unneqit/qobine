@@ -13,7 +13,7 @@ use ratatui::{
 
 use crate::{
     app::{FilteredListState, NotificationList, Output},
-    popup::{DeletePlaylistPopupstate, NewPlaylistPopupState, PlaylistPopupState, Popup},
+    popup::{DeletePlaylistPopupState, NewPlaylistPopupState, PlaylistPopupState, Popup},
     ui::{COLUMN_SPACING, HIGHLIGHT_STYLE, format_duration, mark_as_owned},
 };
 
@@ -102,7 +102,7 @@ impl PlaylistList {
                 Ok(Output::Consumed)
             }
 
-            KeyCode::Char('D') => {
+            KeyCode::Char('U') => {
                 let index = self.items.state.selected();
                 let selected = index.and_then(|index| self.items.filter().get(index));
 
@@ -110,7 +110,7 @@ impl PlaylistList {
                     match selected.is_owned {
                         true => {
                             return Ok(Output::Popup(Popup::DeletePlaylist(
-                                DeletePlaylistPopupstate::new(selected.clone()),
+                                DeletePlaylistPopupState::new(selected.clone()),
                             )));
                         }
                         false => {

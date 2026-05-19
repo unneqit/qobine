@@ -158,6 +158,26 @@ where
     pub fn set_filter(&mut self, items: Vec<T>) {
         self.filter = items;
     }
+
+    pub fn remove_at_index(&mut self, index: usize) {
+        if index >= self.all_items.len() {
+            return;
+        }
+
+        self.all_items.remove(index);
+        self.filter = self.all_items.clone();
+    }
+
+    pub fn move_index_to_new_index(&mut self, index: usize, new_index: usize) {
+        if index >= self.all_items.len() || new_index >= self.all_items.len() {
+            return;
+        }
+
+        let item = self.all_items.remove(index);
+        self.all_items.insert(new_index, item);
+
+        self.filter = self.all_items.clone();
+    }
 }
 
 impl App {

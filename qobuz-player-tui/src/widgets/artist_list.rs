@@ -83,7 +83,7 @@ impl ArtistList {
                 Ok(Output::UpdateFavorites)
             }
 
-            KeyCode::Char('D') => {
+            KeyCode::Char('U') => {
                 let index = self.items.state.selected();
                 let selected = index.and_then(|index| self.items.filter().get(index));
 

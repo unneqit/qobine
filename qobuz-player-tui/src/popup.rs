@@ -214,6 +214,7 @@ pub struct PlaylistPopupState {
     tracks: TrackList,
     title: String,
     id: u32,
+    is_owned: bool,
 }
 
 impl PlaylistPopupState {
@@ -224,6 +225,7 @@ impl PlaylistPopupState {
             title: playlist.title,
             shuffle: false,
             id: playlist.id,
+            is_owned: playlist.is_owned,
         };
 
         if !is_empty {
@@ -233,13 +235,13 @@ impl PlaylistPopupState {
     }
 }
 
-pub struct DeletePlaylistPopupstate {
+pub struct DeletePlaylistPopupState {
     title: String,
     id: u32,
     confirm: bool,
 }
 
-impl DeletePlaylistPopupstate {
+impl DeletePlaylistPopupState {
     pub fn new(playlist: PlaylistSimple) -> Self {
         Self {
             title: playlist.title,
@@ -290,7 +292,7 @@ pub enum Popup {
     Playlist(PlaylistPopupState),
     Track(TrackPopupState),
     NewPlaylist(NewPlaylistPopupState),
-    DeletePlaylist(DeletePlaylistPopupstate),
+    DeletePlaylist(DeletePlaylistPopupState),
 }
 
 impl Popup {
@@ -502,6 +504,92 @@ impl Popup {
                 Popup::Playlist(playlist_popup_state) => match key_event.code {
                     KeyCode::Left | KeyCode::Char('h') | KeyCode::Right | KeyCode::Char('l') => {
                         playlist_popup_state.shuffle = !playlist_popup_state.shuffle;
+                        Ok(Output::Consumed)
+                    }
+                    KeyCode::Char('D') => {
+                        let index = playlist_popup_state.tracks.selected();
+
+                        if let Some(index) = index {
+                            let playlist_track_id = playlist_popup_state
+                                .tracks
+                                .get(index)
+                                .and_then(|p| p.playlist_track_id);
+
+                            if playlist_popup_state.is_owned
+                                && let Some(playlist_track_id) = playlist_track_id
+                            {
+                                client
+                                    .playlist_delete_track(
+                                        playlist_popup_state.id,
+                                        &[playlist_track_id],
+                                    )
+                                    .await?;
+                                playlist_popup_state.tracks.remove_at_index(index);
+                            }
+                        }
+
+                        Ok(Output::Consumed)
+                    }
+                    KeyCode::Char('u') => {
+                        let index = playlist_popup_state.tracks.selected();
+
+                        if let Some(index) = index {
+                            let playlist_track_id = playlist_popup_state
+                                .tracks
+                                .get(index)
+                                .and_then(|p| p.playlist_track_id);
+
+                            if playlist_popup_state.is_owned
+                                && let Some(playlist_track_id) = playlist_track_id
+                            {
+                                let new_index = index - 1;
+                                client
+                                    .update_playlist_track_position(
+                                        new_index,
+                                        playlist_popup_state.id,
+                                        playlist_track_id,
+                                    )
+                                    .await?;
+
+                                playlist_popup_state
+                                    .tracks
+                                    .move_index_to_new_index(index, new_index);
+
+                                playlist_popup_state.tracks.select_index(new_index);
+                            }
+                        }
+
+                        Ok(Output::Consumed)
+                    }
+                    KeyCode::Char('d') => {
+                        let index = playlist_popup_state.tracks.selected();
+
+                        if let Some(index) = index {
+                            let playlist_track_id = playlist_popup_state
+                                .tracks
+                                .get(index)
+                                .and_then(|p| p.playlist_track_id);
+
+                            if playlist_popup_state.is_owned
+                                && let Some(playlist_track_id) = playlist_track_id
+                            {
+                                let new_index = index + 1;
+                                client
+                                    .update_playlist_track_position(
+                                        new_index,
+                                        playlist_popup_state.id,
+                                        playlist_track_id,
+                                    )
+                                    .await?;
+
+                                playlist_popup_state
+                                    .tracks
+                                    .move_index_to_new_index(index, new_index);
+
+                                playlist_popup_state.tracks.select_index(new_index);
+                            }
+                        }
+
                         Ok(Output::Consumed)
                     }
                     _ => {
