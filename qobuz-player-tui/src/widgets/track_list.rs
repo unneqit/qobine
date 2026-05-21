@@ -13,7 +13,7 @@ use ratatui::{
 use crate::{
     app::{FilteredListState, NotificationList, Output},
     popup::Popup,
-    ui::{COLUMN_SPACING, HIGHLIGHT_STYLE, format_duration, mark_explicit_and_hifi},
+    ui::{COLUMN_SPACING, HIGHLIGHT_STYLE, fetch_image, format_duration, mark_explicit_and_hifi},
 };
 
 #[derive(Default)]
@@ -175,8 +175,13 @@ impl TrackList {
                     .and_then(|index| self.items.filter().get(index))
                     .cloned();
 
+                let image = match track.as_ref().and_then(|x| x.image.clone()) {
+                    Some(x) => fetch_image(&x).await,
+                    None => None,
+                };
+
                 if let Some(track) = track {
-                    return Ok(Output::Popup(Popup::TrackInfo(track)));
+                    return Ok(Output::Popup(Popup::TrackInfo(track, image)));
                 }
                 Ok(Output::Consumed)
             }

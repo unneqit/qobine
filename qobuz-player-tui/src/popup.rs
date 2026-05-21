@@ -9,6 +9,7 @@ use ratatui::{
     prelude::*,
     widgets::*,
 };
+use ratatui_image::{StatefulImage, protocol::StatefulProtocol};
 use tui_input::{Input, backend::crossterm::EventHandler};
 
 use crate::{
@@ -293,10 +294,10 @@ pub enum Popup {
     Track(TrackPopupState),
     NewPlaylist(NewPlaylistPopupState),
     DeletePlaylist(DeletePlaylistPopupState),
-    AlbumInfo(Album, bool),
-    ArtistInfo(ArtistPage),
-    PlaylistInfo(Playlist),
-    TrackInfo(Track),
+    AlbumInfo(Album, bool, Option<(StatefulProtocol, f32)>),
+    ArtistInfo(ArtistPage, Option<(StatefulProtocol, f32)>),
+    PlaylistInfo(Playlist, Option<(StatefulProtocol, f32)>),
+    TrackInfo(Track, Option<(StatefulProtocol, f32)>),
 }
 
 impl Popup {
@@ -440,17 +441,17 @@ impl Popup {
                 frame.render_widget(Clear, area);
                 frame.render_widget(tabs, area);
             }
-            Popup::AlbumInfo(album, currently_playing) => {
-                render_album_info(frame, album, *currently_playing);
+            Popup::AlbumInfo(album, currently_playing, image) => {
+                render_album_info(frame, album, *currently_playing, image);
             }
-            Popup::ArtistInfo(artist) => {
-                render_artist_info(frame, artist);
+            Popup::ArtistInfo(artist, image) => {
+                render_artist_info(frame, artist, image);
             }
-            Popup::PlaylistInfo(playlist) => {
-                render_playlist_info(frame, playlist);
+            Popup::PlaylistInfo(playlist, image) => {
+                render_playlist_info(frame, playlist, image);
             }
-            Popup::TrackInfo(track) => {
-                render_track_info(frame, track);
+            Popup::TrackInfo(track, image) => {
+                render_track_info(frame, track, image);
             }
         };
     }
@@ -464,10 +465,10 @@ impl Popup {
     ) -> AppResult<Output> {
         match event {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => match self {
-                Popup::AlbumInfo(_, _) => Ok(Output::Consumed),
-                Popup::ArtistInfo(_) => Ok(Output::Consumed),
-                Popup::PlaylistInfo(_) => Ok(Output::Consumed),
-                Popup::TrackInfo(_) => Ok(Output::Consumed),
+                Popup::AlbumInfo(_, _, _) => Ok(Output::Consumed),
+                Popup::ArtistInfo(_, _) => Ok(Output::Consumed),
+                Popup::PlaylistInfo(_, _) => Ok(Output::Consumed),
+                Popup::TrackInfo(_, _) => Ok(Output::Consumed),
                 Popup::Album(album_state) => {
                     album_state
                         .tracks
@@ -688,7 +689,12 @@ impl Popup {
     }
 }
 
-fn render_album_info(frame: &mut Frame, album: &Album, currently_playing: bool) {
+fn render_album_info(
+    frame: &mut Frame,
+    album: &Album,
+    currently_playing: bool,
+    image: &mut Option<(StatefulProtocol, f32)>,
+) {
     let mut info_lines: Vec<Line> = Vec::new();
 
     info_lines.push(Line::from(album.title.clone()).style(Style::new().bold()));
@@ -715,7 +721,7 @@ fn render_album_info(frame: &mut Frame, album: &Album, currently_playing: bool) 
 
     let info_height = info_lines.len() as u16;
 
-    let box_width = frame.area().width / 2;
+    let box_width = frame.area().width - 20;
     let inner_width = box_width.saturating_sub(2);
 
     let desc_height = if let Some(description) = &album.description {
@@ -747,10 +753,22 @@ fn render_album_info(frame: &mut Frame, album: &Album, currently_playing: bool) 
     let top_area = vertical[0];
     let desc_area = vertical[1];
 
-    let horizontal = Layout::horizontal([Constraint::Min(1)]).split(top_area);
+    let image_width = if let Some((_, ratio)) = image {
+        (*ratio * (top_area.height * 2) as f32) as u16
+    } else {
+        0
+    };
+
+    let horizontal =
+        Layout::horizontal([Constraint::Min(1), Constraint::Length(image_width)]).split(top_area);
 
     let info_paragraph = Paragraph::new(Text::from(info_lines));
     frame.render_widget(info_paragraph, horizontal[0]);
+
+    if let Some((protocol, _)) = image {
+        let stateful_image = StatefulImage::default();
+        frame.render_stateful_widget(stateful_image, horizontal[1], protocol);
+    }
 
     if let Some(description) = &album.description {
         let desc_lines = vec![Line::from(""), Line::from(description.clone())];
@@ -759,7 +777,11 @@ fn render_album_info(frame: &mut Frame, album: &Album, currently_playing: bool) 
     }
 }
 
-fn render_artist_info(frame: &mut Frame, artist: &ArtistPage) {
+fn render_artist_info(
+    frame: &mut Frame,
+    artist: &ArtistPage,
+    image: &mut Option<(StatefulProtocol, f32)>,
+) {
     let mut info_lines: Vec<Line> = Vec::new();
 
     info_lines.push(Line::from(artist.name.clone()).style(Style::new().bold()));
@@ -768,7 +790,7 @@ fn render_artist_info(frame: &mut Frame, artist: &ArtistPage) {
 
     let info_height = info_lines.len() as u16;
 
-    let box_width = frame.area().width / 2;
+    let box_width = frame.area().width - 20;
     let inner_width = box_width.saturating_sub(2);
 
     let desc_height = if let Some(description) = &artist.description {
@@ -793,16 +815,33 @@ fn render_artist_info(frame: &mut Frame, artist: &ArtistPage) {
     frame.render_widget(Clear, area);
     frame.render_widget(outer_block, area);
 
-    let vertical =
-        Layout::vertical([Constraint::Length(info_height), Constraint::Min(0)]).split(inner);
+    let extra_image_lines = 5;
+
+    let vertical = Layout::vertical([
+        Constraint::Length(info_height + extra_image_lines),
+        Constraint::Min(0),
+    ])
+    .split(inner);
 
     let top_area = vertical[0];
     let desc_area = vertical[1];
 
-    let horizontal = Layout::horizontal([Constraint::Min(1)]).split(top_area);
+    let image_width = if let Some((_, ratio)) = image {
+        (*ratio * (top_area.height * 2) as f32) as u16
+    } else {
+        0
+    };
+
+    let horizontal =
+        Layout::horizontal([Constraint::Min(1), Constraint::Length(image_width)]).split(top_area);
 
     let info_paragraph = Paragraph::new(Text::from(info_lines));
     frame.render_widget(info_paragraph, horizontal[0]);
+
+    if let Some((protocol, _)) = image {
+        let stateful_image = StatefulImage::default();
+        frame.render_stateful_widget(stateful_image, horizontal[1], protocol);
+    }
 
     if let Some(description) = &artist.description {
         let desc_lines = vec![Line::from(""), Line::from(description.clone())];
@@ -811,7 +850,11 @@ fn render_artist_info(frame: &mut Frame, artist: &ArtistPage) {
     }
 }
 
-fn render_track_info(frame: &mut Frame, track: &Track) {
+fn render_track_info(
+    frame: &mut Frame,
+    track: &Track,
+    image: &mut Option<(StatefulProtocol, f32)>,
+) {
     let mut info_lines: Vec<Line> = Vec::new();
 
     info_lines.push(Line::from(track.title.clone()).style(Style::new().bold()));
@@ -852,7 +895,7 @@ fn render_track_info(frame: &mut Frame, track: &Track) {
 
     let info_height = info_lines.len() as u16;
 
-    let box_width = frame.area().width / 2;
+    let box_width = frame.area().width - 20;
     let total_height = info_height + 2;
 
     let width = Constraint::Length(box_width);
@@ -867,11 +910,29 @@ fn render_track_info(frame: &mut Frame, track: &Track) {
     frame.render_widget(Clear, area);
     frame.render_widget(outer_block, area);
 
+    let image_width = if let Some((_, ratio)) = image {
+        (*ratio * (inner.height * 2) as f32) as u16
+    } else {
+        0
+    };
+
+    let horizontal =
+        Layout::horizontal([Constraint::Min(1), Constraint::Length(image_width)]).split(inner);
+
     let info_paragraph = Paragraph::new(Text::from(info_lines));
-    frame.render_widget(info_paragraph, inner);
+    frame.render_widget(info_paragraph, horizontal[0]);
+
+    if let Some((protocol, _)) = image {
+        let stateful_image = StatefulImage::default();
+        frame.render_stateful_widget(stateful_image, horizontal[1], protocol);
+    }
 }
 
-fn render_playlist_info(frame: &mut Frame, playlist: &Playlist) {
+fn render_playlist_info(
+    frame: &mut Frame,
+    playlist: &Playlist,
+    image: &mut Option<(StatefulProtocol, f32)>,
+) {
     let mut info_lines: Vec<Line> = Vec::new();
 
     info_lines.push(Line::from(playlist.title.clone()).style(Style::new().bold()));
@@ -887,7 +948,7 @@ fn render_playlist_info(frame: &mut Frame, playlist: &Playlist) {
 
     let info_height = info_lines.len() as u16;
 
-    let box_width = frame.area().width / 2;
+    let box_width = frame.area().width - 20;
     let total_height = info_height + 2;
 
     let width = Constraint::Length(box_width);
@@ -902,6 +963,20 @@ fn render_playlist_info(frame: &mut Frame, playlist: &Playlist) {
     frame.render_widget(Clear, area);
     frame.render_widget(outer_block, area);
 
+    let image_width = if let Some((_, ratio)) = image {
+        (*ratio * (inner.height * 2) as f32) as u16
+    } else {
+        0
+    };
+
+    let horizontal =
+        Layout::horizontal([Constraint::Min(1), Constraint::Length(image_width)]).split(inner);
+
     let info_paragraph = Paragraph::new(Text::from(info_lines));
-    frame.render_widget(info_paragraph, inner);
+    frame.render_widget(info_paragraph, horizontal[0]);
+
+    if let Some((protocol, _)) = image {
+        let stateful_image = StatefulImage::default();
+        frame.render_stateful_widget(stateful_image, horizontal[1], protocol);
+    }
 }

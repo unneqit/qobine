@@ -13,7 +13,7 @@ use ratatui::{
 use crate::{
     app::{FilteredListState, NotificationList, Output},
     popup::{AlbumPopupState, Popup},
-    ui::{COLUMN_SPACING, HIGHLIGHT_STYLE, format_duration, mark_explicit_and_hifi},
+    ui::{COLUMN_SPACING, HIGHLIGHT_STYLE, fetch_image, format_duration, mark_explicit_and_hifi},
 };
 
 #[derive(Default)]
@@ -148,8 +148,9 @@ impl AlbumList {
 
                 if let Some(id) = id {
                     let album = client.album(&id).await?;
+                    let image = fetch_image(&album.image).await;
 
-                    return Ok(Output::Popup(Popup::AlbumInfo(album, false)));
+                    return Ok(Output::Popup(Popup::AlbumInfo(album, false, image)));
                 }
                 Ok(Output::Consumed)
             }

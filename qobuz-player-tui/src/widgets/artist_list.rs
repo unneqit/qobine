@@ -12,7 +12,7 @@ use ratatui::{
 use crate::{
     app::{FilteredListState, NotificationList, Output},
     popup::{ArtistPopupState, Popup},
-    ui::basic_list_table,
+    ui::{basic_list_table, fetch_image},
 };
 
 #[derive(Default)]
@@ -108,7 +108,11 @@ impl ArtistList {
 
                 if let Some(id) = id {
                     let artist = client.artist_page(id).await?;
-                    return Ok(Output::Popup(Popup::ArtistInfo(artist)));
+                    let image = match artist.image.as_ref() {
+                        Some(x) => fetch_image(x).await,
+                        None => None,
+                    };
+                    return Ok(Output::Popup(Popup::ArtistInfo(artist, image)));
                 }
                 Ok(Output::Consumed)
             }

@@ -1,5 +1,7 @@
+use image::load_from_memory;
 use qobuz_player_controls::notification::Notification;
 use ratatui::{layout::Flex, prelude::*, widgets::*};
+use ratatui_image::{picker::Picker, protocol::StatefulProtocol};
 use tui_input::Input;
 
 use crate::{
@@ -352,4 +354,19 @@ pub fn format_seconds(seconds: u32) -> String {
     let minutes = seconds / 60;
     let seconds = seconds % 60;
     format!("{minutes:02}:{seconds:02}")
+}
+
+pub async fn fetch_image(image_url: &str) -> Option<(StatefulProtocol, f32)> {
+    let client = reqwest::Client::new();
+    let response = client.get(image_url).send().await.ok()?;
+    let img_bytes = response.bytes().await.ok()?;
+
+    tokio::task::spawn_blocking(move || {
+        let image = load_from_memory(&img_bytes).ok()?;
+        let ratio = image.width() as f32 / image.height() as f32;
+        let picker = Picker::from_query_stdio().ok()?;
+        Some((picker.new_resize_protocol(image), ratio))
+    })
+    .await
+    .ok()?
 }

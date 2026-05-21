@@ -6,11 +6,11 @@ use crate::{
     popup::{Popup, TrackPopupState},
     queue::QueueState,
     search::SearchState,
+    ui::fetch_image,
 };
 use core::fmt;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind};
 use futures::StreamExt;
-use image::load_from_memory;
 use qobuz_player_controls::{
     AppResult, PositionReceiver, Status, StatusReceiver, TracklistReceiver,
     client::Client,
@@ -20,7 +20,7 @@ use qobuz_player_controls::{
     tracklist::{Tracklist, TracklistType},
 };
 use ratatui::{DefaultTerminal, widgets::*};
-use ratatui_image::{picker::Picker, protocol::StatefulProtocol};
+use ratatui_image::protocol::StatefulProtocol;
 use std::{io, sync::Arc, time::Instant};
 use tokio::time::{self, Duration};
 
@@ -320,7 +320,8 @@ impl App {
                         .and_then(|t| t.album_id.clone())
                         && let Ok(album) = self.client.album(&album_id).await
                     {
-                        let popup = Popup::AlbumInfo(album, true);
+                        let image = fetch_image(&album.image).await;
+                        let popup = Popup::AlbumInfo(album, true, image);
                         let mut popups = match std::mem::take(&mut self.app_state) {
                             AppState::Popup(popups) => popups,
                             _ => Vec::new(),
@@ -576,21 +577,6 @@ impl App {
     fn exit(&mut self) {
         self.exit = true;
     }
-}
-
-async fn fetch_image(image_url: &str) -> Option<(StatefulProtocol, f32)> {
-    let client = reqwest::Client::new();
-    let response = client.get(image_url).send().await.ok()?;
-    let img_bytes = response.bytes().await.ok()?;
-
-    tokio::task::spawn_blocking(move || {
-        let image = load_from_memory(&img_bytes).ok()?;
-        let ratio = image.width() as f32 / image.height() as f32;
-        let picker = Picker::from_query_stdio().ok()?;
-        Some((picker.new_resize_protocol(image), ratio))
-    })
-    .await
-    .ok()?
 }
 
 pub fn get_current_state_without_image(
