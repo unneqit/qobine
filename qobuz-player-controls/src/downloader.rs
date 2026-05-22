@@ -32,11 +32,11 @@ impl Downloader {
     }
 
     pub async fn ensure_track_is_downloaded(&mut self, track: &Track) -> AppResult<DownloadResult> {
-        if self.client.is_legacy_streaming() {
-            return self.ensure_track_is_downloaded_legacy(track).await;
+        if self.client.file_based_streaming() {
+            return self.ensure_track_is_downloaded_file_based(track).await;
         }
 
-        let track_info = self.client.track_url(track.id).await?;
+        let track_info = self.client.get_streaming_info(track.id).await?;
 
         let cache_path = cache_path(
             track,
@@ -56,13 +56,12 @@ impl Downloader {
         Ok(DownloadResult::Streaming(stream))
     }
 
-    /// Legacy path: cheap cpu as no crypto ops
-    /// Cache hits from prior runs still work; cache writeback during streaming is not yet implemented
-    async fn ensure_track_is_downloaded_legacy(
+    /// File based path: cheap cpu as no crypto ops
+    async fn ensure_track_is_downloaded_file_based(
         &mut self,
         track: &Track,
     ) -> AppResult<DownloadResult> {
-        let track_url = self.client.track_url_legacy(track.id).await?;
+        let track_url = self.client.get_file_based_streaming_info(track.id).await?;
 
         let cache_path = cache_path(
             track,
@@ -77,10 +76,10 @@ impl Downloader {
             return Ok(DownloadResult::Cached(cache_path));
         }
 
-        tracing::info!("Streaming (legacy): {}", track.title);
+        tracing::info!("Streaming: {}", track.title);
         let stream = self
             .client
-            .stream_track_legacy(&track_url.url, &cache_path)
+            .stream_track_file_based(&track_url.url, &cache_path)
             .await?;
         Ok(DownloadResult::Streaming(stream))
     }

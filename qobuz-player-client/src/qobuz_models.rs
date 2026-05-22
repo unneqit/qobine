@@ -46,7 +46,7 @@ pub struct TrackInfo {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct LegacyTrackUrl {
+pub struct TrackUrl {
     pub url: String,
     pub format_id: i32,
     pub mime_type: String,

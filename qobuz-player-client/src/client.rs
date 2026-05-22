@@ -186,8 +186,8 @@ enum Endpoint {
     ArtistReleases,
     UserPlaylist,
     Track,
+    File,
     TrackURL,
-    TrackURLLegacy,
     Playlist,
     PlaylistCreate,
     PlaylistDelete,
@@ -226,8 +226,8 @@ impl Display for Endpoint {
             Endpoint::Search => "catalog/search",
             Endpoint::SessionStart => "session/start",
             Endpoint::Track => "track/get",
-            Endpoint::TrackURL => "file/url",
-            Endpoint::TrackURLLegacy => "track/getFileUrl",
+            Endpoint::File => "file/url",
+            Endpoint::TrackURL => "track/getFileUrl",
             Endpoint::UserPlaylist => "playlist/getUserPlaylists",
             Endpoint::Favorites => "favorite/getUserFavorites",
             Endpoint::FavoriteAdd => "favorite/create",
@@ -368,7 +368,7 @@ impl Client {
         user_auth_token: &str,
         user_id: i64,
         max_audio_quality: AudioQuality,
-        legacy_streaming: bool,
+        file_based_streaming: bool,
     ) -> Result<Client> {
         let http_client = reqwest::Client::builder()
             .cookie_store(true)
@@ -377,12 +377,17 @@ impl Client {
 
         let base_url = "https://www.qobuz.com/api.json/0.2/".to_string();
 
-        let (app_id, active_secret) = if legacy_streaming {
-            let LegacySecrets {
+        let (app_id, active_secret) = if file_based_streaming {
+            let SecretsForFileBasedStreaming {
                 app_id,
                 active_secret,
-            } = get_legacy_secrets(&http_client, &base_url, user_auth_token, max_audio_quality)
-                .await?;
+            } = get_secrets_for_file_based_streaming(
+                &http_client,
+                &base_url,
+                user_auth_token,
+                max_audio_quality,
+            )
+            .await?;
             tracing::debug!("Got login secrets + active secret, app_id: {}", app_id);
             (app_id, Some(active_secret))
         } else {
@@ -391,7 +396,6 @@ impl Client {
             (app_id, None)
         };
 
-        let _ = legacy_streaming; //ugly, consumed above to decide the discovery path
         let client = Client {
             http_client,
             session: None,
@@ -730,10 +734,10 @@ impl Client {
         Ok(SeekableStreamReader::new(reader, total_byte_len))
     }
 
-    pub async fn track_url(&mut self, track_id: u32) -> Result<TrackInfo> {
+    pub async fn get_streaming_info(&mut self, track_id: u32) -> Result<TrackInfo> {
         self.ensure_valid_session().await?;
 
-        let endpoint = format!("{}{}", &self.base_url, Endpoint::TrackURL);
+        let endpoint = format!("{}{}", &self.base_url, Endpoint::File);
         let now = format!("{}", time::OffsetDateTime::now_utc().unix_timestamp());
         let quality_string = self.max_audio_quality.to_string();
         let track_id_str = track_id.to_string();
@@ -781,12 +785,12 @@ impl Client {
         }
     }
 
-    pub async fn track_url_legacy(
+    pub async fn get_file_based_streaming_info(
         &self,
         track_id: u32,
-    ) -> Result<crate::qobuz_models::LegacyTrackUrl> {
+    ) -> Result<crate::qobuz_models::TrackUrl> {
         let secret = self.active_secret.as_deref().ok_or(Error::ActiveSecret)?;
-        track_url_legacy(
+        track_url(
             track_id,
             secret,
             &self.base_url,
@@ -798,7 +802,7 @@ impl Client {
         .await
     }
 
-    pub async fn stream_track_legacy(
+    pub async fn stream_track_file_based(
         &self,
         url: &str,
         cache_path: &std::path::Path,
@@ -812,7 +816,7 @@ impl Client {
         let url_parsed: SdUrl = url
             .parse()
             .map_err(|e: url::ParseError| Error::StreamError {
-                message: format!("invalid legacy track URL: {e}"),
+                message: format!("invalid track URL: {e}"),
             })?;
 
         let stream = HttpStream::new(SdClient::new(), url_parsed)
@@ -843,7 +847,7 @@ impl Client {
             let final_path = cache_path.to_path_buf();
             tokio::spawn(async move {
                 handle.wait_for_completion().await;
-                finalize_legacy_cache(partial_path, final_path, content_length);
+                finalize_cache(partial_path, final_path, content_length);
             });
         }
 
@@ -1302,19 +1306,19 @@ async fn get_secrets(client: &reqwest::Client) -> Result<Secrets> {
     Ok(Secrets { app_id })
 }
 
-struct LegacySecrets {
+struct SecretsForFileBasedStreaming {
     app_id: String,
     active_secret: String,
 }
 
 /// extract the app_id, per-timezone secrets, and probe for an active one
 /// tried to mirror 8cd4d7a
-async fn get_legacy_secrets(
+async fn get_secrets_for_file_based_streaming(
     client: &reqwest::Client,
     base_url: &str,
     user_token: &str,
     max_audio_quality: AudioQuality,
-) -> Result<LegacySecrets> {
+) -> Result<SecretsForFileBasedStreaming> {
     use base64::{Engine, engine::general_purpose};
 
     let play_url = "https://play.qobuz.com";
@@ -1417,7 +1421,7 @@ async fn get_legacy_secrets(
     )
     .await?;
 
-    Ok(LegacySecrets {
+    Ok(SecretsForFileBasedStreaming {
         app_id,
         active_secret,
     })
@@ -1436,7 +1440,7 @@ async fn find_active_secret(
     tracing::debug!("probing {} timezone secrets", secrets.len());
 
     for (timezone, secret) in secrets.into_iter() {
-        let response = track_url_legacy(
+        let response = track_url(
             64868955,
             &secret,
             base_url,
@@ -1457,7 +1461,7 @@ async fn find_active_secret(
 }
 
 /// MD5 signature endpoint + sorted(param k+v concatenated) + ts + secret
-async fn track_url_legacy(
+async fn track_url(
     track_id: u32,
     secret: &str,
     base_url: &str,
@@ -1465,8 +1469,8 @@ async fn track_url_legacy(
     app_id: &str,
     user_token: &str,
     max_audio_quality: AudioQuality,
-) -> Result<crate::qobuz_models::LegacyTrackUrl> {
-    let endpoint = format!("{}{}", base_url, Endpoint::TrackURLLegacy);
+) -> Result<crate::qobuz_models::TrackUrl> {
+    let endpoint = format!("{}{}", base_url, Endpoint::TrackURL);
     let now = format!("{}", time::OffsetDateTime::now_utc().unix_timestamp());
     let quality = max_audio_quality.to_string();
     let track_id_str = track_id.to_string();
@@ -1506,23 +1510,19 @@ pub struct SuccessfulResponse {
     status: String,
 }
 
-fn finalize_legacy_cache(partial: PathBuf, final_path: PathBuf, expected: u64) {
+fn finalize_cache(partial: PathBuf, final_path: PathBuf, expected: u64) {
     match std::fs::metadata(&partial) {
         Ok(meta) if meta.len() == expected => {
             if let Err(e) = std::fs::rename(&partial, &final_path) {
-                tracing::warn!("Failed to finalize legacy cache: {e}");
+                tracing::warn!("Failed to finalize cache: {e}");
                 let _ = std::fs::remove_file(&partial);
             } else {
-                tracing::info!(
-                    "Cached (legacy): {} ({} bytes)",
-                    final_path.display(),
-                    expected
-                );
+                tracing::info!("Cached: {} ({} bytes)", final_path.display(), expected);
             }
         }
         Ok(meta) => {
             tracing::debug!(
-                "Legacy stream incomplete ({} of {} bytes), discarding partial",
+                "Stream incomplete ({} of {} bytes), discarding partial",
                 meta.len(),
                 expected
             );

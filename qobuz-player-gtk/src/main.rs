@@ -33,11 +33,10 @@ pub async fn run() -> AppResult<()> {
     let configuration = database.get_configuration().await?;
 
     let app_id = get_app_id().await?;
-    // TODO: --legacy-streaming as a setting in the GTK UI ??
     let client = Arc::new(Client::new(
         credentials,
         configuration.max_audio_quality,
-        false,
+        false, // TODO: Add preferences for file based streaming
     ));
 
     let broadcast = Arc::new(NotificationBroadcast::new());

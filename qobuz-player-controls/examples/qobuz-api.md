@@ -179,7 +179,7 @@ Signature method name: `fileurl`
 - `file_type` — `"full"` for complete track, `"preview"` for 30-second sample
 - `blob` — opaque token used for streaming reports
 
-### Legacy Track URL (deprecated)
+### File Based Track URL streaming
 
 ```
 GET /track/getFileUrl

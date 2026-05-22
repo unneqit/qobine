@@ -56,7 +56,7 @@ pub async fn run() -> AppResult<()> {
     let client = get_client(
         &database,
         max_audio_quality,
-        args.shared.legacy_streaming,
+        args.shared.file_based_streaming,
         headless,
     )
     .await?;
