@@ -208,7 +208,7 @@ fn cache_ttl_row(
     // 1 month = 720 hours
     // 3 moths = 2160 hours
 
-    if ttl != 0 || ttl != 1 || ttl != 720 || ttl != 2160 {
+    if ![0, 1, 720, 2160].contains(&ttl) {
         options.push("Other");
     }
 
@@ -233,6 +233,7 @@ fn cache_ttl_row(
             3 => 2160,
             _ => 0,
         };
+        println!("changed to: {hours}");
         audio_cache_ttl_sender.send(hours).unwrap();
     });
 

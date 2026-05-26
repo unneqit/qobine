@@ -13,3 +13,4 @@ clap.workspace = true
 tokio.workspace = true
 tokio_schedule.workspace = true
 time.workspace = true
+tracing.workspace = true

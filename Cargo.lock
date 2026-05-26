@@ -4130,6 +4130,7 @@ dependencies = [
  "time",
  "tokio",
  "tokio_schedule",
+ "tracing",
 ]
 
 [[package]]

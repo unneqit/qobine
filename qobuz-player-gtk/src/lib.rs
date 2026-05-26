@@ -288,7 +288,7 @@ fn setup_tracklist_listener(
 
                 Ok(exit) = exit_receiver.recv() => {
                     if exit {
-                        sender.send(UiEvent::Exit).unwrap();
+                        _ = sender.send(UiEvent::Exit);
                         break;
                     }
                 }

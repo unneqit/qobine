@@ -178,13 +178,17 @@ pub fn spawn_clean_up_mut(
         loop {
             tokio::select! {
                 Some(new_ttl) = ttl_rx.recv() => {
+                    database.set_cache_ttl_hours(new_ttl).await.unwrap();
+
                     if new_ttl == 0 {
                         initial_ttl = None;
+
+                    tracing::info!("Disabled audio cache busting");
                         continue;
                     }
 
                     initial_ttl = Some(new_ttl);
-                    database.set_cache_ttl_hours(new_ttl).await.unwrap();
+                    tracing::info!("Updated audio cache ttl to: {new_ttl} hours");
                     continue;
                 }
 
