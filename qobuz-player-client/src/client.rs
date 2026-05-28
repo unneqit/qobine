@@ -3,11 +3,11 @@ use crate::{
     qobuz_models::{
         TrackInfo,
         album::Album,
-        album_suggestion::{AlbumOfTheWeekQuery, AlbumSuggestionResponse, ReleaseQuery},
-        artist::{Artist, ArtistsResponse},
+        album_suggestion::{AlbumSuggestionResponse, ReleaseQuery},
+        artist::ArtistsResponse,
         artist_page::ArtistPage,
+        discover::Discover,
         favorites::Favorites,
-        featured::{FeaturedAlbumsResponse, FeaturedPlaylistsResponse},
         genre::{GenreFeaturedPlaylists, GenreResponse},
         playlist::{Playlist, UserPlaylistsResult},
         search_results::SearchAllResults,
@@ -120,65 +120,6 @@ impl ReleaseType {
     }
 }
 
-pub enum FeaturedAlbumType {
-    PressAwards,
-    MostStreamed,
-    NewReleases,
-    Qobuzissims,
-    IdealDiscography,
-}
-
-impl FeaturedAlbumType {
-    fn as_str(&self) -> &'static str {
-        match self {
-            FeaturedAlbumType::PressAwards => "press-awards",
-            FeaturedAlbumType::MostStreamed => "most-streamed",
-            FeaturedAlbumType::NewReleases => "new-releases-full",
-            FeaturedAlbumType::Qobuzissims => "qobuzissims",
-            FeaturedAlbumType::IdealDiscography => "ideal-discography",
-        }
-    }
-}
-
-pub enum FeaturedPlaylistType {
-    EditorsPick,
-}
-
-impl FeaturedPlaylistType {
-    fn as_str(&self) -> &'static str {
-        match self {
-            FeaturedPlaylistType::EditorsPick => "editor-picks",
-        }
-    }
-}
-
-pub enum FeaturedGenreAlbumType {
-    PressAwards,
-    MostStreamed,
-    NewReleases,
-    Qobuzissims,
-    BestSellers,
-}
-
-impl FeaturedGenreAlbumType {
-    fn as_str(&self) -> &'static str {
-        match self {
-            FeaturedGenreAlbumType::PressAwards => "press-awards",
-            FeaturedGenreAlbumType::MostStreamed => "most-streamed",
-            FeaturedGenreAlbumType::NewReleases => "new-releases-full",
-            FeaturedGenreAlbumType::Qobuzissims => "qobuzissims",
-            FeaturedGenreAlbumType::BestSellers => "best-sellers",
-        }
-    }
-}
-
-pub struct FavoriteCollection {
-    pub albums: Vec<Album>,
-    pub artists: Vec<Artist>,
-    pub playlists: Vec<Playlist>,
-    pub tracks: Vec<Track>,
-}
-
 enum Endpoint {
     Album,
     ArtistPage,
@@ -202,12 +143,9 @@ enum Endpoint {
     FavoritePlaylistAdd,
     FavoritePlaylistRemove,
     AlbumSuggest,
-    AlbumFeatured,
-    AlbumOfTheWeek,
-    PlaylistFeatured,
     GenreList,
-    GenreFeatured,
     GenrePlaylists,
+    DiscoverIndex,
 }
 
 impl Display for Endpoint {
@@ -235,12 +173,9 @@ impl Display for Endpoint {
             Endpoint::FavoritePlaylistAdd => "playlist/subscribe",
             Endpoint::FavoritePlaylistRemove => "playlist/unsubscribe",
             Endpoint::AlbumSuggest => "album/suggest",
-            Endpoint::AlbumFeatured => "album/getFeatured",
-            Endpoint::AlbumOfTheWeek => "discover/albumOfTheWeek",
-            Endpoint::PlaylistFeatured => "playlist/getFeatured",
             Endpoint::GenreList => "genre/list",
-            Endpoint::GenreFeatured => "album/getFeatured",
             Endpoint::GenrePlaylists => "discover/playlists",
+            Endpoint::DiscoverIndex => "discover/index",
         };
 
         f.write_str(endpoint)
@@ -418,66 +353,35 @@ impl Client {
         self.user_id
     }
 
-    pub async fn featured_albums(
-        &self,
-        featured_type: FeaturedAlbumType,
-    ) -> Result<FeaturedAlbumsResponse> {
-        let endpoint = format!("{}{}", self.base_url, Endpoint::AlbumFeatured);
-        let type_string = featured_type.as_str();
-        let params = vec![("type", type_string), ("offset", "0"), ("limit", "20")];
-        self.get(&endpoint, Some(&params)).await
-    }
-
-    pub async fn album_of_the_week(&self) -> Result<AlbumOfTheWeekQuery> {
-        self.get(
-            &format!("{}{}", self.base_url, Endpoint::AlbumOfTheWeek),
-            None,
-        )
-        .await
-    }
-
-    pub async fn featured_playlists(
-        &self,
-        featured_type: FeaturedPlaylistType,
-    ) -> Result<FeaturedPlaylistsResponse> {
-        let endpoint = format!("{}{}", self.base_url, Endpoint::PlaylistFeatured);
-        let type_string = featured_type.as_str();
-        let params = vec![("type", type_string), ("offset", "0"), ("limit", "20")];
-        self.get(&endpoint, Some(&params)).await
-    }
-
     pub async fn genres(&self) -> Result<GenreResponse> {
         let endpoint = format!("{}{}", self.base_url, Endpoint::GenreList);
         self.get(&endpoint, None).await
     }
 
-    pub async fn genre_albums(
+    pub async fn genre_playlists(
         &self,
-        genre_id: u32,
-        featured_type: FeaturedGenreAlbumType,
-    ) -> Result<FeaturedAlbumsResponse> {
-        let endpoint = format!("{}{}", self.base_url, Endpoint::GenreFeatured);
-        let genre_id_str = genre_id.to_string();
-        let type_string = featured_type.as_str();
-
-        let params = vec![
-            ("type", type_string),
-            ("genre_id", genre_id_str.as_str()),
-            ("offset", "0"),
-            ("limit", "20"),
-        ];
-        self.get(&endpoint, Some(&params)).await
-    }
-
-    pub async fn genre_playlists(&self, genre_id: u32) -> Result<GenreFeaturedPlaylists> {
+        genre_id: Option<u32>,
+        tag: Option<&str>,
+    ) -> Result<GenreFeaturedPlaylists> {
         let endpoint = format!("{}{}", self.base_url, Endpoint::GenrePlaylists);
-        let genre_id = genre_id.to_string();
+        let genre_id = genre_id.map(|x| x.to_string()).unwrap_or_default();
+        let tag = tag.map(|x| x.to_string()).unwrap_or_default();
 
         let params = vec![
             ("genre_ids", genre_id.as_str()),
+            ("tags", tag.as_str()),
             ("offset", "0"),
             ("limit", "20"),
         ];
+
+        self.get(&endpoint, Some(&params)).await
+    }
+
+    pub async fn discover_index(&self, genre_id: Option<u32>) -> Result<Discover> {
+        let endpoint = format!("{}{}", self.base_url, Endpoint::DiscoverIndex);
+        let genre_id = genre_id.map(|x| x.to_string()).unwrap_or_default();
+
+        let params = vec![("genre_ids", genre_id.as_str())];
 
         self.get(&endpoint, Some(&params)).await
     }
