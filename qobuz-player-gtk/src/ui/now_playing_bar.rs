@@ -1,6 +1,9 @@
 use std::{rc::Rc, time::Duration};
 
-use libadwaita::prelude::*;
+use gtk4 as gtk;
+use libadwaita as adw;
+
+use adw::prelude::*;
 use qobuz_player_controls::{
     Status,
     controls::Controls,
@@ -14,15 +17,15 @@ use crate::ui::{
 
 #[derive(Clone)]
 pub struct NowPlayingBar {
-    pub revealer: gtk4::Revealer,
-    track_title_label: gtk4::Label,
-    subtitle_box: gtk4::Box,
-    cover: gtk4::Image,
-    pub play_button: gtk4::Button,
+    pub revealer: gtk::Revealer,
+    track_title_label: gtk::Label,
+    subtitle_box: gtk::Box,
+    cover: gtk::Image,
+    pub play_button: gtk::Button,
 
-    progress_scale: gtk4::Scale,
-    progress_current_label: gtk4::Label,
-    progress_total_label: gtk4::Label,
+    progress_scale: gtk::Scale,
+    progress_current_label: gtk::Label,
+    progress_total_label: gtk::Label,
     on_open_album: Rc<dyn Fn(AlbumHeaderInfo)>,
     on_open_artist: Rc<dyn Fn(ArtistHeaderInfo)>,
     on_open_playlist: Rc<dyn Fn(PlaylistHeaderInfo)>,
@@ -35,71 +38,74 @@ impl NowPlayingBar {
         on_open_artist: Rc<dyn Fn(ArtistHeaderInfo)>,
         on_open_playlist: Rc<dyn Fn(PlaylistHeaderInfo)>,
     ) -> Self {
-        let title_label = gtk4::Label::builder()
-            .halign(gtk4::Align::Center)
-            .ellipsize(gtk4::pango::EllipsizeMode::End)
+        let title_label = gtk::Label::builder()
+            .halign(gtk::Align::Fill)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
             .wrap(false)
-            .build();
-        title_label.add_css_class("title-3");
-
-        let subtitle_box = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Horizontal)
-            .halign(gtk4::Align::Center)
+            .xalign(0.5)
+            .css_classes(vec!["title-3"])
             .build();
 
-        let text_box = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Vertical)
-            .halign(gtk4::Align::Center)
-            .hexpand(true)
+        let subtitle_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .halign(gtk::Align::Fill)
             .build();
-        text_box.append(&title_label);
-        text_box.append(&subtitle_box);
 
-        let controls_box = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Horizontal)
+        let track_info_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .halign(gtk::Align::Fill)
+            .valign(gtk::Align::Center)
+            .spacing(2)
+            .build();
+
+        track_info_box.append(&title_label);
+        track_info_box.append(&subtitle_box);
+
+        let controls_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
             .spacing(12)
-            .halign(gtk4::Align::Center)
+            .halign(gtk::Align::Center)
             .build();
 
         let controls_prev = controls.clone();
-        let prev_button = gtk4::Button::builder()
+        let prev_button = gtk::Button::builder()
             .icon_name("media-seek-backward-symbolic")
+            .css_classes(vec!["flat"])
             .build();
-        prev_button.add_css_class("flat");
         prev_button.connect_clicked(move |_| controls_prev.previous());
 
         let controls_play_pause = controls.clone();
-        let play_button = gtk4::Button::builder()
+        let play_button = gtk::Button::builder()
             .icon_name("media-playback-start-symbolic")
+            .css_classes(vec!["flat"])
             .build();
-        play_button.add_css_class("flat");
         play_button.connect_clicked(move |_| controls_play_pause.play_pause());
 
         let controls_next = controls.clone();
-        let next_button = gtk4::Button::builder()
+        let next_button = gtk::Button::builder()
             .icon_name("media-seek-forward-symbolic")
+            .css_classes(vec!["flat"])
             .build();
-        next_button.add_css_class("flat");
         next_button.connect_clicked(move |_| controls_next.next());
 
         controls_box.append(&prev_button);
         controls_box.append(&play_button);
         controls_box.append(&next_button);
 
-        let progress_current_label = gtk4::Label::builder()
+        let progress_current_label = gtk::Label::builder()
             .label("0:00")
             .width_chars(6)
             .xalign(0.0)
             .build();
 
-        let progress_total_label = gtk4::Label::builder()
+        let progress_total_label = gtk::Label::builder()
             .label("0:00")
             .width_chars(6)
             .xalign(1.0)
             .build();
 
-        let progress_scale = gtk4::Scale::builder()
-            .orientation(gtk4::Orientation::Horizontal)
+        let progress_scale = gtk::Scale::builder()
+            .orientation(gtk::Orientation::Horizontal)
             .hexpand(true)
             .draw_value(false)
             .focusable(false)
@@ -111,30 +117,33 @@ impl NowPlayingBar {
             glib::Propagation::Stop
         });
 
-        let progress_box = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Horizontal)
+        let progress_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
             .hexpand(true)
+            .halign(gtk::Align::Fill)
+            .spacing(6)
             .build();
 
         progress_box.append(&progress_current_label);
         progress_box.append(&progress_scale);
         progress_box.append(&progress_total_label);
 
-        let left_box = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Vertical)
+        let player_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
-            .valign(gtk4::Align::Center)
+            .halign(gtk::Align::Fill)
+            .valign(gtk::Align::Center)
+            .spacing(8)
             .build();
 
-        left_box.append(&text_box);
-        left_box.append(&controls_box);
-        left_box.append(&progress_box);
+        player_box.append(&controls_box);
+        player_box.append(&progress_box);
 
-        let cover = gtk4::Image::builder().pixel_size(130).build();
-        let cover_frame = gtk4::Frame::builder().child(&cover).build();
+        let cover = gtk::Image::builder().pixel_size(75).build();
+        let cover_frame = gtk::Frame::builder().child(&cover).build();
 
-        let content = gtk4::Box::builder()
-            .orientation(gtk4::Orientation::Horizontal)
+        let content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
             .spacing(24)
             .margin_start(24)
             .margin_end(24)
@@ -143,13 +152,16 @@ impl NowPlayingBar {
             .build();
 
         content.append(&cover_frame);
-        content.append(&left_box);
+        content.append(&track_info_box);
+        content.append(&player_box);
 
-        let frame = gtk4::Frame::builder().child(&content).build();
-        frame.add_css_class("card");
+        let frame = gtk::Frame::builder()
+            .child(&content)
+            .css_classes(vec!["card"])
+            .build();
 
-        let revealer = gtk4::Revealer::builder()
-            .transition_type(gtk4::RevealerTransitionType::SlideUp)
+        let revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::SlideUp)
             .child(&frame)
             .reveal_child(false)
             .build();
@@ -175,12 +187,11 @@ impl NowPlayingBar {
         };
 
         let make_label = |text: &str| {
-            let l = gtk4::Label::builder()
+            gtk::Label::builder()
                 .label(text)
-                .ellipsize(gtk4::pango::EllipsizeMode::End)
-                .build();
-            l.add_css_class("dim-label");
-            l
+                .ellipsize(gtk::pango::EllipsizeMode::End)
+                .css_classes(vec!["dim-label"])
+                .build()
         };
 
         let append_sep = || {
@@ -296,7 +307,7 @@ pub fn update_progress(bar: &NowPlayingBar, position: &Duration) {
         .set_text(&format_time(position.as_secs() as u32));
 }
 
-pub fn update_now_playing_button_icon(status: &Status, button: &gtk4::Button) {
+pub fn update_now_playing_button_icon(status: &Status, button: &gtk::Button) {
     match status {
         Status::Playing => button.set_icon_name("media-playback-pause-symbolic"),
         Status::Buffering => button.set_icon_name("content-loading-symbolic"),
@@ -304,7 +315,7 @@ pub fn update_now_playing_button_icon(status: &Status, button: &gtk4::Button) {
     }
 }
 
-fn animate_scale_to(scale: &gtk4::Scale, target: f64, duration_ms: u32) {
+fn animate_scale_to(scale: &gtk::Scale, target: f64, duration_ms: u32) {
     let adjustment = scale.adjustment();
     let start = adjustment.value();
     let delta = target - start;
@@ -320,9 +331,9 @@ fn animate_scale_to(scale: &gtk4::Scale, target: f64, duration_ms: u32) {
         adjustment.set_value(start + delta * eased);
 
         if t >= 1.0 {
-            gtk4::glib::ControlFlow::Break
+            gtk::glib::ControlFlow::Break
         } else {
-            gtk4::glib::ControlFlow::Continue
+            gtk::glib::ControlFlow::Continue
         }
     });
 }
