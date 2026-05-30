@@ -144,25 +144,20 @@ impl NowPlayingBar {
 
         let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
-            .spacing(24)
-            .margin_start(24)
-            .margin_end(24)
-            .margin_top(24)
-            .margin_bottom(24)
+            .spacing(12)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(12)
+            .margin_bottom(12)
             .build();
 
         content.append(&cover_frame);
         content.append(&track_info_box);
         content.append(&player_box);
 
-        let frame = gtk::Frame::builder()
-            .child(&content)
-            .css_classes(vec!["card"])
-            .build();
-
         let revealer = gtk::Revealer::builder()
             .transition_type(gtk::RevealerTransitionType::SlideUp)
-            .child(&frame)
+            .child(&content)
             .reveal_child(false)
             .build();
 
