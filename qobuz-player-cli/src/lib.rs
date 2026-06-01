@@ -93,15 +93,11 @@ pub enum SharedCommands {
     },
 }
 
-pub async fn handle_shared_commands(
-    command: SharedCommands,
-    database: &Database,
-    headless: bool,
-) -> AppResult<()> {
+pub async fn handle_shared_commands(command: SharedCommands, database: &Database) -> AppResult<()> {
     match command {
         SharedCommands::Login => {
             let (_client, oauth_result) =
-                Client::new_with_oauth_login(AudioQuality::Mp3, false, headless).await?;
+                Client::new_with_oauth_login(AudioQuality::Mp3, false, true).await?;
 
             database.set_credentials(oauth_result.into()).await?;
             println!("Login successful! You can now run qobuz-player.");

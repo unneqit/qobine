@@ -66,7 +66,7 @@ pub async fn run() -> AppResult<()> {
     let database = Arc::new(Database::new().await?);
 
     if let Some(command) = args.command {
-        handle_shared_commands(command, &database, headless).await?;
+        handle_shared_commands(command, &database).await?;
         return Ok(());
     }
 
