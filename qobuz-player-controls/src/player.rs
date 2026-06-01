@@ -1,5 +1,5 @@
 use crate::{
-    controls::NewQueueItem,
+    controls::{NewQueueItem, StreamingConfiguration},
     models::{Album, Track, TrackStatus},
 };
 use rand::seq::SliceRandom;
@@ -646,25 +646,28 @@ impl Player {
                 start_index,
             } => self.new_track_queue(items, play, start_index).await?,
             ControlCommand::ClearQueue => self.clear_queue().await?,
-            ControlCommand::SetAudioCacheDirectory { new_directory } => {
-                self.database.set_cache_directory(&new_directory).await?;
-                self.downloader.set_audio_cache_dir(new_directory);
-            }
-            ControlCommand::SetMaxAudioQuality { new_quality } => {
-                self.database.set_max_audio_quality(new_quality).await?;
-                self.client.set_max_audio_quality(new_quality).await;
-            }
-            ControlCommand::UseFileBasedStreaming {
-                use_file_based_streaming,
-            } => {
-                tracing::info!("Using file based streaming: {use_file_based_streaming}");
-                self.database
-                    .set_use_file_based_streaming(use_file_based_streaming)
-                    .await?;
-                self.client
-                    .use_file_based_streaming(use_file_based_streaming)
-                    .await;
-            }
+
+            ControlCommand::StreamingConfiguration { configuration } => match configuration {
+                StreamingConfiguration::SetMaxAudioQuality { new_quality } => {
+                    self.database.set_max_audio_quality(new_quality).await?;
+                    self.client.set_max_audio_quality(new_quality).await;
+                }
+                StreamingConfiguration::SetAudioCacheDirectory { new_directory } => {
+                    self.database.set_cache_directory(&new_directory).await?;
+                    self.downloader.set_audio_cache_dir(new_directory);
+                }
+                StreamingConfiguration::UseFileBasedStreaming {
+                    use_file_based_streaming,
+                } => {
+                    tracing::info!("Using file based streaming: {use_file_based_streaming}");
+                    self.database
+                        .set_use_file_based_streaming(use_file_based_streaming)
+                        .await?;
+                    self.client
+                        .use_file_based_streaming(use_file_based_streaming)
+                        .await;
+                }
+            },
         }
         Ok(())
     }

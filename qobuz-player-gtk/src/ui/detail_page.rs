@@ -20,7 +20,6 @@ pub fn build_detail_header(
     client: Arc<Client>,
     controls: Controls,
     ui_event_sender: UiEventSender,
-    cover_pixel_size: i32,
     text_rows: Vec<gtk::Widget>,
     buttons: Vec<gtk::Button>,
     favorite_button_type: DetailType,
@@ -29,14 +28,9 @@ pub fn build_detail_header(
         .content_fit(gtk::ContentFit::Cover)
         .build();
 
-    let clamp = adw::Clamp::builder()
-        .child(&cover)
-        .maximum_size(cover_pixel_size)
-        .build();
-
     let cover_frame = gtk::Frame::builder()
         .valign(gtk::Align::End)
-        .child(&clamp)
+        .child(&cover)
         .build();
 
     let header_text = gtk::Box::builder()

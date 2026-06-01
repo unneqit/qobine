@@ -136,6 +136,7 @@ pub fn build_playlist_tile(playlist: &PlaylistSimple) -> adw::Bin {
 pub fn build_artist_tile(artist: &Artist) -> adw::Bin {
     let vbox = gtk::Box::builder()
         .orientation(gtk::Orientation::Vertical)
+        .valign(gtk::Align::End)
         .spacing(6)
         .build();
 
@@ -461,15 +462,15 @@ pub fn build_track_row(
         .build()
 }
 
-fn section(title: &str, content: gtk4::Widget) -> gtk4::Box {
-    let title = gtk4::Label::builder()
+fn section(title: &str, content: gtk::Widget) -> gtk::Box {
+    let title = gtk::Label::builder()
         .label(title)
         .css_classes(["title-3"])
-        .halign(gtk4::Align::Start)
+        .halign(gtk::Align::Start)
         .build();
 
-    let box_ = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Vertical)
+    let box_ = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
         .spacing(12)
         .margin_top(24)
         .build();
@@ -483,9 +484,9 @@ fn section(title: &str, content: gtk4::Widget) -> gtk4::Box {
 fn album_scroller(
     albums: &[AlbumSimple],
     on_open_album: Rc<dyn Fn(AlbumHeaderInfo)>,
-) -> gtk4::Widget {
-    let box_ = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
+) -> gtk::Widget {
+    let box_ = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
         .spacing(12)
         .margin_top(6)
         .margin_bottom(6)
@@ -506,9 +507,9 @@ fn album_scroller(
         box_.append(&button);
     }
 
-    let scroller = gtk4::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vscrollbar_policy(gtk4::PolicyType::Never)
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Automatic)
+        .vscrollbar_policy(gtk::PolicyType::Never)
         .child(&box_)
         .build();
 
@@ -518,9 +519,9 @@ fn album_scroller(
 fn artist_scroller(
     artists: &[Artist],
     on_open_artist: Rc<dyn Fn(ArtistHeaderInfo)>,
-) -> gtk4::Widget {
-    let box_ = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
+) -> gtk::Widget {
+    let box_ = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
         .spacing(12)
         .margin_top(6)
         .margin_bottom(6)
@@ -539,9 +540,9 @@ fn artist_scroller(
         box_.append(&button);
     }
 
-    let scroller = gtk4::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vscrollbar_policy(gtk4::PolicyType::Never)
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Automatic)
+        .vscrollbar_policy(gtk::PolicyType::Never)
         .child(&box_)
         .build();
 
@@ -551,9 +552,9 @@ fn artist_scroller(
 fn playlist_scroller(
     playlists: &[PlaylistSimple],
     on_open_playlist: Rc<dyn Fn(PlaylistHeaderInfo)>,
-) -> gtk4::Widget {
-    let row = gtk4::Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
+) -> gtk::Widget {
+    let row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
         .spacing(12)
         .margin_top(6)
         .margin_bottom(6)
@@ -572,9 +573,9 @@ fn playlist_scroller(
         row.append(&button);
     }
 
-    let scroller = gtk4::ScrolledWindow::builder()
-        .hscrollbar_policy(gtk4::PolicyType::Automatic)
-        .vscrollbar_policy(gtk4::PolicyType::Never)
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Automatic)
+        .vscrollbar_policy(gtk::PolicyType::Never)
         .child(&row)
         .build();
 

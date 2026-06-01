@@ -221,15 +221,17 @@ impl DiscoverPage {
                 return;
             };
 
-            let mut selected = page.selected.borrow_mut();
+            {
+                let mut selected = page.selected.borrow_mut();
 
-            selected.genre_id = if target == "all" {
-                None
-            } else {
-                target.parse::<u32>().ok()
-            };
+                selected.genre_id = if target == "all" {
+                    None
+                } else {
+                    target.parse::<u32>().ok()
+                };
 
-            selected.playlist_tag = None;
+                selected.playlist_tag = None;
+            }
 
             page.load();
         });
@@ -289,22 +291,24 @@ impl DiscoverPage {
                 return;
             };
 
-            let mut selected = page.selected.borrow_mut();
+            {
+                let mut selected = page.selected.borrow_mut();
 
-            if target == "all" {
-                if selected.playlist_tag.is_none() {
-                    return;
+                if target == "all" {
+                    if selected.playlist_tag.is_none() {
+                        return;
+                    }
+
+                    selected.playlist_tag = None;
+                } else {
+                    let current = selected.playlist_tag.as_ref().map(|tag| tag.slug.clone());
+
+                    if current.as_deref() == Some(target.as_str()) {
+                        return;
+                    }
+
+                    selected.playlist_tag = tags.iter().find(|tag| tag.slug == target).cloned();
                 }
-
-                selected.playlist_tag = None;
-            } else {
-                let current = selected.playlist_tag.as_ref().map(|tag| tag.slug.clone());
-
-                if current.as_deref() == Some(target.as_str()) {
-                    return;
-                }
-
-                selected.playlist_tag = tags.iter().find(|tag| tag.slug == target).cloned();
             }
 
             page.reload_playlist_section(tags.clone());

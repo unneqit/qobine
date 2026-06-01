@@ -102,7 +102,6 @@ impl AlbumDetailPage {
             client.clone(),
             controls.clone(),
             ui_event_sender.clone(),
-            300,
             vec![
                 title.clone().upcast(),
                 artist_box.clone().upcast(),

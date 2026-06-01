@@ -59,16 +59,16 @@ pub enum ControlCommand {
         start_index: Option<usize>,
     },
     ClearQueue,
-    // TODO: Consider add a separate "Preferences" command
-    SetMaxAudioQuality {
-        new_quality: AudioQuality,
+    StreamingConfiguration {
+        configuration: StreamingConfiguration,
     },
-    SetAudioCacheDirectory {
-        new_directory: PathBuf,
-    },
-    UseFileBasedStreaming {
-        use_file_based_streaming: bool,
-    },
+}
+
+#[derive(Debug)]
+pub enum StreamingConfiguration {
+    SetMaxAudioQuality { new_quality: AudioQuality },
+    SetAudioCacheDirectory { new_directory: PathBuf },
+    UseFileBasedStreaming { use_file_based_streaming: bool },
 }
 
 #[derive(Debug, Clone)]
@@ -209,21 +209,27 @@ impl Controls {
 
     pub fn set_audio_max_quality(&self, new_quality: AudioQuality) {
         self.tx
-            .send(ControlCommand::SetMaxAudioQuality { new_quality })
+            .send(ControlCommand::StreamingConfiguration {
+                configuration: StreamingConfiguration::SetMaxAudioQuality { new_quality },
+            })
             .expect("infallible");
     }
 
     pub fn set_use_file_based_streaming(&self, use_file_based_streaming: bool) {
         self.tx
-            .send(ControlCommand::UseFileBasedStreaming {
-                use_file_based_streaming,
+            .send(ControlCommand::StreamingConfiguration {
+                configuration: StreamingConfiguration::UseFileBasedStreaming {
+                    use_file_based_streaming,
+                },
             })
             .expect("infallible");
     }
 
     pub fn set_audio_cache_directory(&self, new_directory: PathBuf) {
         self.tx
-            .send(ControlCommand::SetAudioCacheDirectory { new_directory })
+            .send(ControlCommand::StreamingConfiguration {
+                configuration: StreamingConfiguration::SetAudioCacheDirectory { new_directory },
+            })
             .expect("infallible");
     }
 }

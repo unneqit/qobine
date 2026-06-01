@@ -163,7 +163,6 @@ impl PlaylistDetailPage {
             client.clone(),
             controls.clone(),
             ui_event_sender.clone(),
-            300,
             vec![
                 title.clone().upcast(),
                 owner.clone().upcast(),

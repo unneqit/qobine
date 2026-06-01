@@ -86,12 +86,13 @@ impl ArtistDetailPage {
             }
         });
 
+        let spacer = gtk::Box::builder().height_request(50).build();
+
         let header = build_detail_header(
             client.clone(),
             controls.clone(),
             ui_event_sender.clone(),
-            200,
-            vec![name.clone().upcast()],
+            vec![name.clone().upcast(), spacer.upcast()],
             vec![play_button],
             DetailType::Artist(artist_id),
         );
