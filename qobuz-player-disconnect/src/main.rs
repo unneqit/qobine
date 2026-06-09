@@ -1,11 +1,9 @@
-#[cfg(feature = "gpio")]
-use qobuz_player_cli::GpioArgs;
 use qobuz_player_cli::{
-    ConnectNameArgs, DelayArgs, SharedArgs, SharedCommands, create_player, default_audio_cache,
+    DelayArgs, SharedArgs, SharedCommands, create_player, default_audio_cache,
     default_audio_quality, get_client, handle_shared_commands, spawn_clean_up,
 };
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc, watch};
 
 use clap::Parser;
 use qobuz_player_controls::{
@@ -15,18 +13,23 @@ use qobuz_player_controls::{
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Arguments {
+    /// Device name
+    #[clap(short, long)]
+    device_name: String,
+
+    /// Password
+    #[clap(short, long)]
+    password: String,
+
+    /// Server url
+    #[clap(short, long)]
+    server_url: String,
+
     #[clap(flatten)]
     shared: SharedArgs,
 
     #[clap(flatten)]
     delay: DelayArgs,
-
-    #[clap(flatten)]
-    connect: ConnectNameArgs,
-
-    #[cfg(feature = "gpio")]
-    #[clap(flatten)]
-    gpio: GpioArgs,
 
     #[clap(subcommand)]
     command: Option<SharedCommands>,
@@ -78,36 +81,41 @@ pub async fn run() -> AppResult<()> {
     )
     .await?;
 
-    #[cfg(feature = "gpio")]
-    if args.gpio.gpio {
-        let status_receiver = player.status();
-        let active_receiver = player.active();
-        tokio::spawn(async move {
-            if let Err(e) = qobuz_player_gpio::init(status_receiver, active_receiver).await {
-                error_exit(e.into());
-            }
-        });
-    }
+    let (available_devices_tx, _) = watch::channel(Default::default());
+    let (active_device_sender, _) = watch::channel(Default::default());
+    let (_, active_device_receiver) = mpsc::unbounded_channel();
 
     {
-        let app_id = client.app_id().await?;
         let position_receiver = player.position();
         let tracklist_receiver = player.tracklist();
         let volume_receiver = player.volume();
         let status_receiver = player.status();
         let controls = player.controls();
 
+        let tracklist_sender = player.tracklist_sender();
+        let position_sender = player.position_sender();
+        let status_sender = player.status_sender();
+        let volume_sender = player.volume_sender();
+        let active_sender = player.active_sender();
+
         tokio::spawn(async move {
-            if let Err(e) = qobuz_player_connect::init(
-                &app_id,
-                args.connect.connect_name,
-                args.connect.connect_port,
+            if let Err(e) = qobuz_player_disconnect::init(
+                &args.server_url,
+                &args.password,
+                &args.device_name,
                 controls,
+                tracklist_sender,
+                position_sender,
+                volume_sender,
+                status_sender,
+                active_sender,
+                available_devices_tx,
+                active_device_sender,
                 position_receiver,
                 tracklist_receiver,
                 status_receiver,
                 volume_receiver,
-                max_audio_quality,
+                active_device_receiver,
             )
             .await
             {

@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <!-- Info & Controls (never clipped) -->
+    <!-- Info & Controls -->
     <div class="flex min-w-0 flex-1 flex-col justify-center sm:gap-4">
       <!-- Track Info -->
       <div class="flex flex-col text-center md:text-left">
@@ -77,20 +77,26 @@
       ) {}
 
       <!-- Controls -->
-      <div class="flex items-center justify-center gap-8">
-        <div class="flex w-12 items-center justify-center">
+      <div class="flex items-center justify-center">
+        <div class="btn btn-ghost flex w-20 items-center">
           @defer (previous.html) {}
         </div>
-        <div class="flex w-12 items-center justify-center">
+        <div class="btn btn-ghost flex w-20 items-center">
           @defer (player-state.html; playing_info=playing_info) {}
         </div>
-        <div class="flex w-12 items-center justify-center">
+        <div class="btn btn-ghost flex w-20 items-center">
           @defer (next.html) {}
         </div>
       </div>
 
       <!-- Volume -->
-      @defer (volume-slider.html; current_volume=playing_info.current_volume) {}
+      <div class="flex">
+        @defer (
+          volume-slider.html;
+          current_volume=playing_info.current_volume
+        ) {}
+        @defer (connect.html; playing_info=playing_info) {}
+      </div>
     </div>
   </div>
 </div>

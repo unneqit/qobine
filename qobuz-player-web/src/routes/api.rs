@@ -7,7 +7,7 @@ use std::{
 use axum::{
     Json, Router,
     extract::{Path, State},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post, put},
 };
 use axum_extra::extract::Form;
@@ -56,6 +56,8 @@ pub fn routes() -> Router<Arc<AppState>> {
             "/api/rfid/reference/playlist",
             post(link_playlist_rfid_reference),
         )
+        .route("/api/active-device/{device_id}", post(set_active_device))
+        .route("/api/available-devices", get(get_available_devices))
 }
 
 async fn playing_info(State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -282,6 +284,8 @@ async fn play_rfid_reference(State(state): State<Arc<AppState>>, Path(reference)
         &state.tracklist_receiver,
         None,
         None,
+        state.connect_device_name.as_deref(),
+        state.set_connect_active_device.clone(),
     )
     .await;
 }
@@ -318,4 +322,17 @@ async fn link_playlist_rfid_reference(
     )?;
 
     Ok(state.send_toast(Notification::Success("Link complete".into())))
+}
+
+async fn set_active_device(
+    State(state): State<Arc<AppState>>,
+    Path(device_id): Path<String>,
+) -> impl IntoResponse {
+    if let Some(sender) = &state.set_connect_active_device {
+        sender.send(device_id).unwrap();
+    }
+}
+
+async fn get_available_devices(State(state): State<Arc<AppState>>) -> Response {
+    state.render("connect-content.html", &{})
 }

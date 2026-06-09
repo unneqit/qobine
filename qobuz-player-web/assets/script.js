@@ -28,6 +28,11 @@ function initSse() {
     if (slider) {
       slider.value = event.data;
     }
+
+    const percentage = document.getElementById("volume-percentage");
+    if (percentage) {
+      percentage.innerHTML = `${event.data}%`;
+    }
   });
 
   for (const level of ["error", "warn", "success", "info"]) {
@@ -48,6 +53,21 @@ function initSse() {
     const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
     const seconds = String(totalSeconds % 60).padStart(2, "0");
     positionElement.textContent = `${minutes}:${seconds}`;
+  });
+
+  evtSource.addEventListener("available-devices", () => {
+    for (const el of document.querySelectorAll(
+      "[data-sse~=available-devices]",
+    )) {
+      htmx.trigger(el, "available-devices");
+    }
+  });
+
+  evtSource.addEventListener("active-device", () => {
+    console.warn("new active device");
+    for (const el of document.querySelectorAll("[data-sse~=active-device]")) {
+      htmx.trigger(el, "active-device");
+    }
   });
 }
 

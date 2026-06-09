@@ -19,7 +19,7 @@ pub fn routes() -> Router<std::sync::Arc<crate::AppState>> {
 }
 
 async fn index(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    now_playing(&state)
+    now_playing(&state).await
 }
 
 async fn status_partial(State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -27,15 +27,15 @@ async fn status_partial(State(state): State<Arc<AppState>>) -> impl IntoResponse
 }
 
 async fn now_playing_partial(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    now_playing(&state)
+    now_playing(&state).await
 }
 
 async fn now_playing_content(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let context = now_playing_context(&state);
+    let context = now_playing_context(&state).await;
     state.render("now-playing-content.html", &context)
 }
 
-fn now_playing_context(state: &AppState) -> serde_json::Value {
+async fn now_playing_context(state: &AppState) -> serde_json::Value {
     let tracklist = state.tracklist_receiver.borrow().clone();
     let position_mseconds = state.position_receiver.borrow().as_millis();
 
@@ -54,8 +54,8 @@ fn now_playing_context(state: &AppState) -> serde_json::Value {
     })
 }
 
-fn now_playing(state: &AppState) -> Response {
-    let context = now_playing_context(state);
+async fn now_playing(state: &AppState) -> Response {
+    let context = now_playing_context(state).await;
     state.render("now-playing.html", &context)
 }
 
