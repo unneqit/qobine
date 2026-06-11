@@ -28,13 +28,11 @@ pub struct Sink {
     track_handle: Option<JoinHandle<()>>,
     duration_played: Arc<Mutex<Duration>>,
     preferred_device_id: Option<String>,
-    is_playing: bool,
 }
 
 impl Sink {
     pub fn new(volume: VolumeReceiver, preferred_device_id: Option<String>) -> AppResult<Self> {
         let (track_finished, _) = watch::channel(());
-
         Ok(Self {
             sink: None,
             output_stream: None,
@@ -44,7 +42,6 @@ impl Sink {
             track_handle: Default::default(),
             duration_played: Default::default(),
             preferred_device_id,
-            is_playing: false,
         })
     }
 
@@ -64,17 +61,13 @@ impl Sink {
         position - duration_played
     }
 
-    pub fn play(&mut self) {
-        self.is_playing = true;
-
+    pub fn play(&self) {
         if let Some(player) = &self.sink {
             player.play();
         }
     }
 
-    pub fn pause(&mut self) {
-        self.is_playing = false;
-
+    pub fn pause(&self) {
         if let Some(player) = &self.sink {
             player.pause();
         }
@@ -83,18 +76,12 @@ impl Sink {
     pub fn seek(&self, duration: Duration) -> AppResult<()> {
         if let Some(player) = &self.sink {
             let current_volume = *self.volume.borrow();
-
             player.set_volume(0.0);
             player.pause();
 
             let result = player.try_seek(duration);
 
-            if self.is_playing {
-                player.play();
-            } else {
-                player.pause();
-            }
-
+            player.play();
             set_volume(player, &current_volume);
 
             match result {
@@ -113,13 +100,7 @@ impl Sink {
 
     pub fn clear(&mut self) -> AppResult<()> {
         tracing::info!("Clearing sink");
-
-        self.is_playing = false;
         self.clear_queue()?;
-
-        if let Some(player) = &self.sink {
-            player.pause();
-        }
 
         self.sink = None;
         self.output_stream = None;
@@ -206,11 +187,6 @@ impl Sink {
 
             let (sender, receiver) = queue(true);
             let player = rodio::Player::connect_new(mixer.mixer());
-
-            if !self.is_playing {
-                player.pause();
-            }
-
             player.append(receiver);
             set_volume(&player, &self.volume.borrow());
 
@@ -224,14 +200,6 @@ impl Sink {
 
         let duration_played = self.duration_played.clone();
         let signal = self.sender.as_ref().unwrap().append_with_signal(source);
-
-        if let Some(player) = &self.sink {
-            if self.is_playing {
-                player.play();
-            } else {
-                player.pause();
-            }
-        }
 
         let track_handle = tokio::spawn(async move {
             loop {

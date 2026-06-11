@@ -167,7 +167,7 @@ impl Player {
         {
             tracing::info!("Sink is empty. Query track from play");
             self.set_target_status(Status::Buffering);
-            self.query_track(&current_track, false, true).await?;
+            self.query_track(&current_track, false).await?;
         } else {
             self.set_target_status(Status::Playing);
             self.sink.play();
@@ -195,12 +195,7 @@ impl Player {
         self.target_status.send(status).expect("infallible");
     }
 
-    async fn query_track(
-        &mut self,
-        track: &Track,
-        next_track: bool,
-        play_after: bool,
-    ) -> AppResult<()> {
+    async fn query_track(&mut self, track: &Track, next_track: bool) -> AppResult<()> {
         tracing::info!(
             "Querying {} track: {}",
             if next_track { "next" } else { "current" },
@@ -232,11 +227,8 @@ impl Player {
                 }
             };
         }
-
-        if play_after {
-            self.sink.play();
-            self.set_target_status(Status::Playing);
-        }
+        self.sink.play();
+        self.set_target_status(Status::Playing);
 
         Ok(())
     }
@@ -317,7 +309,7 @@ impl Player {
         self.position.send(Default::default())?;
 
         if tracklist.skip_to_track(new_position).is_some() {
-            self.new_queue(tracklist, false).await?;
+            self.new_queue(tracklist).await?;
         } else {
             tracklist.reset();
             self.sink.clear()?;
@@ -340,14 +332,14 @@ impl Player {
         self.skip_to_position(current_position - 1, false).await
     }
 
-    async fn new_queue(&mut self, tracklist: Tracklist, play_after: bool) -> AppResult<()> {
+    async fn new_queue(&mut self, tracklist: Tracklist) -> AppResult<()> {
         self.sink.clear()?;
         self.next_track_is_queried = false;
         self.next_track_in_sink_queue = false;
 
         if let Some(first_track) = tracklist.current_track() {
             tracing::info!("New queue starting with: {}", first_track.title);
-            self.query_track(first_track, false, play_after).await?;
+            self.query_track(first_track, false).await?;
         }
 
         self.broadcast_tracklist(tracklist).await?;
@@ -387,7 +379,7 @@ impl Player {
 
         if play && let Some(first_track) = tracklist.current_track() {
             tracing::info!("New queue starting with: {}", first_track.title);
-            self.query_track(first_track, false, false).await?;
+            self.query_track(first_track, false).await?;
         }
 
         self.broadcast_tracklist(tracklist).await?;
@@ -419,7 +411,7 @@ impl Player {
 
         let tracklist = Tracklist::new(TracklistType::Tracks, tracks_to_queue_items(vec![track]));
 
-        self.new_queue(tracklist, true).await
+        self.new_queue(tracklist).await
     }
 
     async fn play_album(&mut self, album_id: &str, index: usize) -> AppResult<()> {
@@ -442,7 +434,7 @@ impl Player {
         );
 
         tracklist.skip_to_track(index - unstreamable_tracks_to_index);
-        self.new_queue(tracklist, true).await
+        self.new_queue(tracklist).await
     }
 
     async fn play_top_tracks(&mut self, artist_id: u32, index: usize) -> AppResult<()> {
@@ -461,7 +453,7 @@ impl Player {
         );
 
         tracklist.skip_to_track(index - unstreamable_tracks_to_index);
-        self.new_queue(tracklist, true).await
+        self.new_queue(tracklist).await
     }
 
     async fn play_tracks(&mut self, ids: Vec<u32>, shuffle: bool) -> AppResult<()> {
@@ -480,7 +472,7 @@ impl Player {
         let mut tracklist = Tracklist::new(TracklistType::Tracks, tracks_to_queue_items(tracks));
 
         tracklist.skip_to_track(0);
-        self.new_queue(tracklist, true).await
+        self.new_queue(tracklist).await
     }
 
     async fn play_playlist(
@@ -524,7 +516,7 @@ impl Player {
 
         tracklist.skip_to_track(index - unstreamable_tracks_to_index);
 
-        self.new_queue(tracklist, true).await
+        self.new_queue(tracklist).await
     }
 
     async fn remove_index_from_queue(&mut self, index: usize) -> AppResult<()> {
@@ -615,7 +607,7 @@ impl Player {
 
                 if let Some(next_track) = tracklist.next_track() {
                     tracing::info!("Query next track: {} from tick", &next_track.title);
-                    self.query_track(next_track, true, false).await?;
+                    self.query_track(next_track, true).await?;
                 }
             }
         }
@@ -734,7 +726,7 @@ impl Player {
                         tracing::info!("Waiting for sample rate change delay");
                         sleep(delay).await;
                     }
-                    self.query_track(next_track, false, false).await?;
+                    self.query_track(next_track, false).await?;
                 }
             }
             None => {
@@ -757,7 +749,7 @@ impl Player {
                     let tracklist = self.tracklist_rx.borrow();
                     tracklist.clone()
                 };
-                self.new_queue(tracklist, false).await?;
+                self.new_queue(tracklist).await?;
             }
             false => {
                 self.sink.clear()?;
