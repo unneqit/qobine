@@ -21,7 +21,6 @@ qobuz-player-gpio = { version = "*", path = "../qobuz-player-gpio", optional = t
 qobuz-player-cli = { version = "*", path = "../qobuz-player-cli" }
 
 tokio.workspace = true
-tracing.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
