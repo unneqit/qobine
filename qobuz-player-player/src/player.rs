@@ -346,7 +346,7 @@ impl Player {
         self.position.send(Default::default())?;
 
         if tracklist.skip_to_track(new_position).is_some() {
-            self.new_queue(tracklist).await?;
+            self.new_queue(tracklist, false).await?;
         } else {
             tracklist.reset();
             self.sink.clear()?;
@@ -369,12 +369,19 @@ impl Player {
         self.skip_to_position(current_position - 1, false).await
     }
 
-    async fn new_queue(&mut self, tracklist: Tracklist) -> AppResult<()> {
+    async fn new_queue(&mut self, tracklist: Tracklist, always_play: bool) -> AppResult<()> {
         self.sink.clear()?;
         self.next_track_is_queried = false;
         self.next_track_in_sink_queue = false;
 
-        if let Some(first_track) = tracklist.current_track() {
+        let target_state_play = matches!(
+            *self.target_status.borrow(),
+            Status::Playing | Status::Buffering
+        );
+
+        if (always_play || target_state_play)
+            && let Some(first_track) = tracklist.current_track()
+        {
             tracing::info!("New queue starting with: {}", first_track.title);
             self.query_track(first_track, false).await?;
         }
@@ -448,7 +455,7 @@ impl Player {
 
         let tracklist = Tracklist::new(TracklistType::Tracks, tracks_to_queue_items(vec![track]));
 
-        self.new_queue(tracklist).await
+        self.new_queue(tracklist, true).await
     }
 
     async fn play_album(&mut self, album_id: &str, index: usize) -> AppResult<()> {
@@ -471,7 +478,7 @@ impl Player {
         );
 
         tracklist.skip_to_track(index - unstreamable_tracks_to_index);
-        self.new_queue(tracklist).await
+        self.new_queue(tracklist, true).await
     }
 
     async fn play_top_tracks(&mut self, artist_id: u32, index: usize) -> AppResult<()> {
@@ -490,7 +497,7 @@ impl Player {
         );
 
         tracklist.skip_to_track(index - unstreamable_tracks_to_index);
-        self.new_queue(tracklist).await
+        self.new_queue(tracklist, true).await
     }
 
     async fn play_tracks(&mut self, ids: Vec<u32>, shuffle: bool) -> AppResult<()> {
@@ -509,7 +516,7 @@ impl Player {
         let mut tracklist = Tracklist::new(TracklistType::Tracks, tracks_to_queue_items(tracks));
 
         tracklist.skip_to_track(0);
-        self.new_queue(tracklist).await
+        self.new_queue(tracklist, true).await
     }
 
     async fn play_playlist(
@@ -553,7 +560,7 @@ impl Player {
 
         tracklist.skip_to_track(index - unstreamable_tracks_to_index);
 
-        self.new_queue(tracklist).await
+        self.new_queue(tracklist, true).await
     }
 
     async fn remove_index_from_queue(&mut self, index: usize) -> AppResult<()> {
@@ -789,7 +796,7 @@ impl Player {
                     let tracklist = self.tracklist_rx.borrow();
                     tracklist.clone()
                 };
-                self.new_queue(tracklist).await?;
+                self.new_queue(tracklist, false).await?;
             }
             false => {
                 self.sink.clear()?;
