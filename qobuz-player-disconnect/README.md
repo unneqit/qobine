@@ -4,8 +4,6 @@ This release brings a self-hostable Connect feature called "Disconnect".
 You can host the server yourself, or you can use my public at: https://qobine-disconnect.sofusconnect.addington.dk
 Please don't abuse it 😄 
 
-Currently only the RFID and the web projects are supported. Support for the TUI and the GTK players are coming.
-
 ## How to use:
 When running the web or rfid project provide the following flags:
 ```
