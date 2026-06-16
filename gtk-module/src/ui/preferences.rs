@@ -139,8 +139,12 @@ fn preferences_page(
 
     page.add(&queue_group(controls, &configuration));
 
-    page.add(&logout_group(exit_sender, database.clone()));
-    page.add(&disconnect_group(&configuration, ui_event_sender, database));
+    page.add(&disconnect_group(
+        &configuration,
+        ui_event_sender,
+        database.clone(),
+    ));
+    page.add(&logout_group(exit_sender, database));
 
     page
 }
@@ -378,6 +382,23 @@ fn disconnect_group(
 ) -> adw::PreferencesGroup {
     let group = adw::PreferencesGroup::new();
     group.set_title("Disconnect");
+
+    let info = gtk::Button::builder()
+        .icon_name("info-outline-symbolic")
+        .tooltip_text("Open information page")
+        .css_classes(["flat"])
+        .build();
+
+    info.connect_clicked(move |_| {
+        if let Err(err) = gio::AppInfo::launch_default_for_uri(
+            "https://github.com/SofusA/qobine/tree/main/disconnect-module",
+            None::<&gio::AppLaunchContext>,
+        ) {
+            tracing::error!("Failed to open information page: {err}");
+        }
+    });
+
+    group.set_header_suffix(Some(&info));
 
     let enabled = adw::SwitchRow::new();
     enabled.set_title("Enable disconnect");
