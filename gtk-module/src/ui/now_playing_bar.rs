@@ -254,11 +254,12 @@ impl NowPlayingBar {
             .hexpand(false)
             .build();
 
-        let cover = gtk::Picture::new();
-        cover.set_content_fit(gtk::ContentFit::Contain);
-        cover.set_can_shrink(true);
-        cover.set_hexpand(false);
-        cover.set_vexpand(false);
+        let cover = gtk::Picture::builder()
+            .content_fit(gtk::ContentFit::Contain)
+            .can_shrink(true)
+            .hexpand(false)
+            .vexpand(false)
+            .build();
 
         let clamp = adw::Clamp::builder().child(&cover).maximum_size(75).build();
 

@@ -247,11 +247,11 @@ pub fn build_track_row(
 
     match show_cover {
         true => {
-            let cover = gtk::Picture::new();
-
+            let cover = gtk::Picture::builder().build();
+            let clamp = adw::Clamp::builder().child(&cover).maximum_size(75).build();
             set_picture_from_url(track.image.as_deref(), &cover);
 
-            let cover_frame = gtk::Frame::builder().child(&cover).build();
+            let cover_frame = gtk::Frame::builder().child(&clamp).build();
             track_row_box.append(&cover_frame);
         }
         false => {
