@@ -113,7 +113,7 @@ pub enum Output {
     Popup(Popup),
     PopPopupUpdateFavorites,
     AddTrackToPlaylistPopup(Track),
-    AddTrackToPlaylistAndPopPopup((u32, u32)), // TODO: Add a type
+    AddTrackToPlaylistAndPopPopup((u32, u32)),
 }
 
 pub enum FavoriteAdd {

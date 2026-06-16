@@ -610,7 +610,6 @@ impl Client {
         self.playlist(playlist_id).await
     }
 
-    // TODO: To be removed
     pub async fn genres(&self) -> Result<Vec<Genre>> {
         if let Some(cache) = self.genres_cache.get().await {
             return Ok(cache);
