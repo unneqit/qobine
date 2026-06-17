@@ -29,7 +29,7 @@ pub struct NowPlayingBar {
     progress_current_label: gtk::Label,
     progress_total_label: gtk::Label,
 
-    output_button: gtk::Button,
+    connect_button: gtk::MenuButton,
     available_devices: Rc<RefCell<Vec<String>>>,
     active_device: Rc<RefCell<String>>,
 
@@ -74,7 +74,7 @@ impl NowPlayingBar {
         track_info_box.append(&title_label);
         track_info_box.append(&subtitle_box);
 
-        let connect_button = gtk::Button::builder()
+        let connect_button = gtk::MenuButton::builder()
             .icon_name("audio-speakers-symbolic")
             .tooltip_text("Connect")
             .css_classes(vec!["flat"])
@@ -82,77 +82,77 @@ impl NowPlayingBar {
             .valign(gtk::Align::Center)
             .build();
 
-        let dialog_available_devices = available_devices.clone();
-        let dialog_active_device = active_device.clone();
-        let dialog_sender = set_connect_active_device.clone();
+        let connect_list = gtk::ListBox::builder()
+            .selection_mode(gtk::SelectionMode::None)
+            .css_classes(vec!["boxed-list"])
+            .build();
 
-        connect_button.connect_clicked(move |button| {
-            let devices = dialog_available_devices.borrow().clone();
-            let active = dialog_active_device.borrow().clone();
+        let connect_group = adw::PreferencesGroup::builder()
+            .title("Select output device")
+            .build();
 
-            if devices.is_empty() {
-                return;
-            }
+        connect_group.add(&connect_list);
 
-            let dialog = adw::Dialog::builder()
-                .title("Connect")
-                .content_width(360)
-                .content_height(420)
-                .build();
+        let connect_content = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .margin_top(12)
+            .margin_bottom(12)
+            .margin_start(12)
+            .margin_end(12)
+            .width_request(300)
+            .build();
 
-            let toolbar_view = adw::ToolbarView::new();
-            let header_bar = adw::HeaderBar::new();
+        connect_content.append(&connect_group);
 
-            toolbar_view.add_top_bar(&header_bar);
+        let connect_popover = gtk::Popover::builder()
+            .child(&connect_content)
+            .has_arrow(true)
+            .build();
 
-            let list = gtk::ListBox::builder()
-                .selection_mode(gtk::SelectionMode::None)
-                .css_classes(vec!["boxed-list"])
-                .build();
+        connect_button.set_popover(Some(&connect_popover));
 
-            for device in devices {
-                let row = adw::ActionRow::builder()
-                    .title(&device)
-                    .activatable(true)
-                    .build();
+        connect_popover.connect_show({
+            let connect_list = connect_list.clone();
+            let available_devices = available_devices.clone();
+            let active_device = active_device.clone();
+            let sender = set_connect_active_device.clone();
+            let popover = connect_popover.clone();
 
-                if device == active {
-                    let check = gtk::Image::from_icon_name("object-select-symbolic");
-                    row.add_suffix(&check);
+            move |_| {
+                while let Some(child) = connect_list.first_child() {
+                    connect_list.remove(&child);
                 }
 
-                let row_device = device.clone();
-                let row_sender = dialog_sender.clone();
-                let row_active_device = dialog_active_device.clone();
-                let row_dialog = dialog.clone();
+                let devices = available_devices.borrow().clone();
+                let active = active_device.borrow().clone();
 
-                row.connect_activated(move |_| {
-                    *row_active_device.borrow_mut() = row_device.clone();
-                    let _ = row_sender.send(row_device.clone());
-                    row_dialog.close();
-                });
+                for device in devices {
+                    let row = adw::ActionRow::builder()
+                        .title(&device)
+                        .activatable(true)
+                        .build();
 
-                list.append(&row);
+                    if device == active {
+                        let check = gtk::Image::from_icon_name("object-select-symbolic");
+                        row.add_suffix(&check);
+                    }
+
+                    let row_device = device.clone();
+                    let row_active_device = active_device.clone();
+                    let row_sender = sender.clone();
+                    let row_popover = popover.clone();
+
+                    row.connect_activated(move |_| {
+                        *row_active_device.borrow_mut() = row_device.clone();
+
+                        let _ = row_sender.send(row_device.clone());
+
+                        row_popover.popdown();
+                    });
+
+                    connect_list.append(&row);
+                }
             }
-
-            let group = adw::PreferencesGroup::builder()
-                .title("Select output device")
-                .build();
-            group.add(&list);
-
-            let content = gtk::Box::builder()
-                .orientation(gtk::Orientation::Vertical)
-                .margin_start(12)
-                .margin_end(12)
-                .margin_top(12)
-                .margin_bottom(12)
-                .build();
-
-            content.append(&group);
-
-            toolbar_view.set_content(Some(&content));
-            dialog.set_child(Some(&toolbar_view));
-            dialog.present(Some(button));
         });
 
         let volume_button = gtk::MenuButton::builder()
@@ -397,7 +397,7 @@ impl NowPlayingBar {
             progress_scale,
             progress_current_label,
             progress_total_label,
-            output_button: connect_button,
+            connect_button,
             available_devices,
             active_device,
             on_open_album,
@@ -417,7 +417,7 @@ impl NowPlayingBar {
         *self.available_devices.borrow_mut() = available_devices;
         *self.active_device.borrow_mut() = active_device.clone();
 
-        self.output_button.set_visible(has_devices);
+        self.connect_button.set_visible(has_devices);
     }
 
     pub fn update(&self, tracklist: &Tracklist) {
