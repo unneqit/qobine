@@ -7,7 +7,7 @@ use player_module::{
     player::Player,
 };
 use reqwest::{RequestBuilder, header::CONTENT_TYPE};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt},
     sync::{
@@ -181,12 +181,15 @@ pub async fn handle_play_scan(
         },
     };
 
-    let tracklist = tracklist_receiver.borrow();
-    let now_playing = tracklist.list_type();
+    let now_playing = {
+        let tracklist = tracklist_receiver.borrow();
+        tracklist.list_type().clone()
+    };
+
     match reference {
         ReferenceType::Album(id) => {
-            if let TracklistType::Album(now_playing) = now_playing
-                && now_playing.id == id
+            if let TracklistType::Album(now_playing_album) = &now_playing
+                && now_playing_album.id == id
             {
                 controls.play();
                 return;
@@ -196,13 +199,15 @@ pub async fn handle_play_scan(
                 && let Some(connect_device_name) = connect_device_name
             {
                 _ = connect_set_device.send(connect_device_name.to_string());
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
 
             controls.play_album(&id, 0);
         }
+
         ReferenceType::Playlist(id) => {
-            if let TracklistType::Playlist(now_playing) = now_playing
-                && now_playing.id == id
+            if let TracklistType::Playlist(now_playing_playlist) = &now_playing
+                && now_playing_playlist.id == id
             {
                 controls.play();
                 return;
@@ -212,6 +217,7 @@ pub async fn handle_play_scan(
                 && let Some(connect_device_name) = connect_device_name
             {
                 _ = connect_set_device.send(connect_device_name.to_string());
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
 
             controls.play_playlist(id, 0, false);

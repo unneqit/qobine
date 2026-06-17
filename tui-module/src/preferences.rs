@@ -456,22 +456,22 @@ impl PreferencesState {
                 let focus = self.focus.unwrap_or_default();
 
                 match key_event.code {
-                    KeyCode::Down | KeyCode::Char('j') => {
+                    KeyCode::Down => {
                         self.focus = Some(focus.next());
                         Output::Consumed
                     }
 
-                    KeyCode::Up | KeyCode::Char('k') => {
+                    KeyCode::Up => {
                         self.focus = Some(focus.previous());
                         Output::Consumed
                     }
 
-                    KeyCode::Left | KeyCode::Char('h') => {
+                    KeyCode::Left => {
                         self.handle_left();
                         Output::Consumed
                     }
 
-                    KeyCode::Right | KeyCode::Char('l') => {
+                    KeyCode::Right => {
                         self.handle_right();
                         Output::Consumed
                     }
