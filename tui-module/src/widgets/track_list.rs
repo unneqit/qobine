@@ -183,19 +183,22 @@ impl TrackList {
             }
 
             KeyCode::Char('i') => {
-                let index = self.items.state.selected();
-
-                let track = index
+                let id = self
+                    .items
+                    .state
+                    .selected()
                     .and_then(|index| self.items.filter().get(index))
-                    .cloned();
+                    .map(|track| track.id);
 
-                let image = match track.as_ref().and_then(|x| x.image.clone()) {
-                    Some(x) => fetch_image(&x).await,
-                    None => None,
-                };
+                if let Some(id) = id {
+                    let track = client.track(id).await?;
 
-                if let Some(track) = track {
-                    return Ok(Output::Popup(Popup::TrackInfo(track, image)));
+                    let image = match track.image.as_ref() {
+                        Some(x) => fetch_image(x).await,
+                        None => None,
+                    };
+
+                    return Ok(Output::Popup(Popup::TrackInfo(track, image, 0)));
                 }
                 Ok(Output::Consumed)
             }
