@@ -90,6 +90,12 @@ async fn search() {
 }
 
 #[tokio::test]
+async fn search_2() {
+    let client = get_client().await.unwrap();
+    client.search_all("pippi", 20).await.unwrap();
+}
+
+#[tokio::test]
 async fn album() {
     let client = get_client().await.unwrap();
     client.album("mwytv5nahdbga").await.unwrap();

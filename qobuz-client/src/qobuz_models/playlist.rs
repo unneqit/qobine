@@ -43,28 +43,16 @@ pub struct Playlist {
     pub images150: Option<Vec<String>>,
     pub images: Option<Vec<String>>,
     pub is_collaborative: bool,
-    pub is_published: Option<bool>,
     pub description: String,
-    pub created_at: i64,
     pub images300: Option<Vec<String>>,
     pub duration: i64,
-    pub updated_at: i64,
-    pub published_to: Option<i64>,
     pub tracks_count: i64,
     pub name: String,
-    pub is_public: bool,
-    pub published_from: Option<i64>,
     pub id: i64,
     pub is_featured: Option<bool>,
-    pub position: Option<i64>,
-    #[serde(default)]
-    pub image_rectangle_mini: Vec<String>,
-    pub timestamp_position: Option<i64>,
     #[serde(default)]
     pub image_rectangle: Vec<String>,
-    pub slug: Option<String>,
     #[serde(default)]
-    pub stores: Vec<String>,
     pub tracks: Option<Tracks>,
 }
 
