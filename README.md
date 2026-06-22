@@ -12,10 +12,12 @@ The web interface is ideal for a setup with a single board computer, e.g. Raspbe
 
 ### Terminal UI
 ![TUI screenshot](/assets/qobine-tui.png)
+
 [More info](/tui-module)
 
 ### GNOME player
 ![GTK screenshot](/assets/qobine-gtk.png)
+
 [More info](/tui-module)
 
 ### Web UI
@@ -23,6 +25,7 @@ The web interface is ideal for a setup with a single board computer, e.g. Raspbe
 
 ### RFID player
 ![RFID player](/assets/rfid-player.gif?raw=true)
+
 [More info](/rfid-module)
 
 ## Connect
@@ -30,6 +33,7 @@ The web interface is ideal for a setup with a single board computer, e.g. Raspbe
 There is initial support for Qobuz Connect in web, tui and rfid players, and a standalone minimal connect player.
 This can be enabled with the `--connect` flag.
 However this is currently very limited, experimental and full of bugs.
+
 [More info on Connect player](/connect-module)
 
 ### Qobine Disconnect
