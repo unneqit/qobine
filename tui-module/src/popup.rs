@@ -242,6 +242,7 @@ pub struct AlbumPopupState {
     selected_sub_tab: usize,
     about_scroll: ScrollbarState,
     id: String,
+    awards: Vec<String>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -278,6 +279,7 @@ impl AlbumPopupState {
             sampling_rate: album.sampling_rate,
             selected_sub_tab: 0,
             about_scroll: ScrollbarState::default(),
+            awards: album.awards,
             id: album.id,
         }
     }
@@ -299,6 +301,15 @@ impl AlbumPopupState {
         }
         parts.push(format!("{} tracks", self.total_tracks));
         parts.push(format_seconds(self.duration_seconds));
+
+        let awards = self.awards.len();
+
+        if awards > 0 {
+            parts.push(format!(
+                "{awards} award{}",
+                if awards == 1 { "" } else { "s" }
+            ));
+        }
 
         let mut info = vec![Span::styled(parts.join(" · "), Style::new().dim())];
 
@@ -601,11 +612,9 @@ impl Popup {
 
                 if has_description {
                     if let Some(description) = &album.description {
-                        let blurb = header_blurb(description, info_chunks[2].width);
+                        let blurb = header_blurb(description, info_chunks[2].width as usize);
                         frame.render_widget(
-                            Paragraph::new(blurb)
-                                .style(Style::new().dim())
-                                .wrap(Wrap { trim: true }),
+                            Paragraph::new(blurb).style(Style::new().dim()),
                             info_chunks[2],
                         );
                     }
@@ -623,7 +632,13 @@ impl Popup {
                     frame.render_widget(Paragraph::new(hint).style(Style::new().dim()), content);
                 } else if album.selected_tab_kind() == Some(AlbumTabKind::About) {
                     let description = album.description.clone().unwrap_or_default();
-                    render_about(frame, content, &description, &mut album.about_scroll);
+                    render_about(
+                        frame,
+                        content,
+                        &description,
+                        album.awards.as_ref(),
+                        &mut album.about_scroll,
+                    );
                 } else if let Some(state) = album.current_state_mut() {
                     match state {
                         SelectedAlbumPopupSubtabMut::Tracks(track_list) => track_list.render(
@@ -720,12 +735,10 @@ impl Popup {
                 frame.render_widget(Paragraph::new(name), info_chunks[0]);
 
                 if let Some(description) = &artist.description {
-                    let blurb = header_blurb(description, info_chunks[1].width);
+                    let blurb = header_blurb(description, info_chunks[1].width as usize);
                     frame.render_widget(
-                        Paragraph::new(blurb)
-                            .style(Style::new().dim())
-                            .wrap(Wrap { trim: true }),
-                        info_chunks[1],
+                        Paragraph::new(blurb).style(Style::new().dim()),
+                        info_chunks[2],
                     );
                 }
 
@@ -740,7 +753,7 @@ impl Popup {
 
                 if artist.selected_tab_kind() == Some(TabKind::About) {
                     let description = artist.description.clone().unwrap_or_default();
-                    render_about(frame, content, &description, &mut artist.about_scroll);
+                    render_about(frame, content, &description, &[], &mut artist.about_scroll);
                 } else if let Some(state) = artist.current_state_mut() {
                     match state {
                         SelectedArtistPopupSubtabMut::Albums(album_list) => album_list.render(
@@ -1224,16 +1237,36 @@ fn wrap_text(text: &str, width: u16) -> Vec<Line<'static>> {
     lines
 }
 
-fn render_about(frame: &mut Frame, area: Rect, description: &str, scroll: &mut ScrollbarState) {
+fn render_about(
+    frame: &mut Frame,
+    area: Rect,
+    description: &str,
+    awards: &[String],
+    scroll: &mut ScrollbarState,
+) {
     let [text_area, bar_area] =
         Layout::horizontal([Constraint::Min(0), Constraint::Length(2)]).areas(area);
 
-    let lines = wrap_text(description, text_area.width);
+    let mut lines: Vec<Line> = Vec::new();
+
+    if !awards.is_empty() {
+        lines.push(Line::styled("Awards", Style::new().bold()));
+
+        for award in awards {
+            lines.push(Line::from(format!("• {}", award)));
+        }
+
+        lines.push(Line::from(""));
+    }
+
+    lines.extend(wrap_text(description, text_area.width));
+
     let total = lines.len() as u16;
     let viewport = text_area.height;
     let max_scroll = total.saturating_sub(viewport);
 
     let position = scroll.get_position().min(max_scroll as usize);
+
     *scroll = scroll
         .position(position)
         .content_length((max_scroll + 1) as usize)
@@ -1255,36 +1288,23 @@ fn render_about(frame: &mut Frame, area: Rect, description: &str, scroll: &mut S
     }
 }
 
-fn header_blurb(description: &str, width: u16) -> Line<'static> {
+fn header_blurb(description: &str, width: usize) -> Line<'static> {
     let normalized = description.split_whitespace().collect::<Vec<_>>().join(" ");
-    let line = width as usize;
-    let capacity = line.saturating_mul(2);
 
-    if normalized.chars().count() <= capacity {
+    let hint = " [see about]";
+    let ellipsis = "…";
+
+    let reserved = hint.chars().count() + ellipsis.chars().count();
+
+    let effective = width.saturating_sub(reserved);
+
+    if normalized.chars().count() <= width {
         return Line::from(normalized);
     }
 
-    let hint = " [see about]";
-    let effective = capacity.saturating_sub(hint.chars().count());
+    let truncated: String = normalized.chars().take(effective).collect();
 
-    let sentence_end = normalized
-        .char_indices()
-        .enumerate()
-        .filter(|(char_pos, (_, c))| {
-            matches!(c, '.' | '!' | '?') && *char_pos >= line && *char_pos < effective
-        })
-        .map(|(_, (byte_idx, c))| byte_idx + c.len_utf8())
-        .last();
-
-    let head = if let Some(end) = sentence_end {
-        normalized[..end].to_string()
-    } else {
-        let truncated: String = normalized
-            .chars()
-            .take(effective.saturating_sub(1))
-            .collect();
-        format!("{}…", truncated.trim_end())
-    };
+    let head = format!("{}{}", truncated.trim_end(), ellipsis);
 
     Line::from(vec![
         Span::raw(head),
