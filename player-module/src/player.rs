@@ -271,10 +271,12 @@ impl Player {
                 let suggestion = self
                     .client
                     .suggest_track(queue.iter().map(|x| x.track.id).collect())
-                    .await?;
+                    .await;
 
-                tracklist.set_list_type(TracklistType::Tracks);
-                tracklist.push_track(suggestion);
+                if let Ok(suggestion) = suggestion {
+                    tracklist.set_list_type(TracklistType::Tracks);
+                    tracklist.push_track(suggestion);
+                }
             }
         }
 
