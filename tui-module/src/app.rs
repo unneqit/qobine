@@ -43,7 +43,7 @@ impl NotificationList {
         self.notifications.push((notification, Instant::now()));
     }
 
-    pub fn tick(&mut self) -> bool {
+    fn tick(&mut self) -> bool {
         let notifications_before_clean = self.notifications.len();
         self.notifications
             .retain(|notification| notification.1.elapsed() < Duration::from_secs(5));
@@ -223,7 +223,7 @@ where
 
 impl App {
     pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        let mut tick_interval = time::interval(Duration::from_millis(100));
+        let mut notification_tick_interval = time::interval(Duration::from_millis(2000));
         let mut receiver = self.broadcast.subscribe();
         let mut event_stream = EventStream::new();
         let (image_tx, mut image_rx) =
@@ -291,8 +291,10 @@ impl App {
                     self.should_draw = true;
                 }
 
-                _ = tick_interval.tick() => {
-                    // Tick is only used for notification cleanup
+                _ = notification_tick_interval.tick() => {
+                    if self.notifications.tick() {
+                        self.should_draw = true;
+                    };
                 }
 
                 notification = receiver.recv() => {
@@ -302,10 +304,6 @@ impl App {
                     }
                 }
             }
-
-            if self.notifications.tick() {
-                self.should_draw = true;
-            };
 
             if self.should_draw {
                 terminal.draw(|frame| self.render(frame))?;
