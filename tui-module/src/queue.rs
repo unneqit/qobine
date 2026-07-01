@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use controls_module::{
     controls::Controls,
     models::{Track, TrackStatus},
@@ -12,9 +10,9 @@ use ratatui::{
 };
 
 use crate::{
-    app::{FavoriteAdd, FavoriteRemove, NotificationList, Output},
+    app::{NotificationList, Output},
     popup::Popup,
-    ui::{basic_list_table, block, mark_explicit_and_hifi, mark_favorite},
+    ui::{basic_list_table, block, mark_explicit_and_hifi},
 };
 
 pub struct QueueState {
@@ -29,7 +27,7 @@ impl QueueState {
             state: Default::default(),
         }
     }
-    pub fn render(&mut self, frame: &mut Frame, area: Rect, favorite_tracks: &HashSet<u32>) {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect) {
         let table = basic_list_table(
             self.items
                 .iter()
@@ -44,13 +42,10 @@ impl QueueState {
                         }
                     };
 
-                    let title = mark_favorite(
-                        mark_explicit_and_hifi(
-                            track.title.clone(),
-                            track.explicit,
-                            track.hires_available,
-                        ),
-                        favorite_tracks.contains(&track.id),
+                    let title = mark_explicit_and_hifi(
+                        track.title.clone(),
+                        track.explicit,
+                        track.hires_available,
                     );
 
                     let mut spans = vec![Span::from(format!("{} ", index + 1))];
@@ -147,7 +142,7 @@ impl QueueState {
                                 "{} added to favorites",
                                 selected.title
                             )));
-                            return Ok(Output::FavoriteAdded(FavoriteAdd::Track(selected.clone())));
+                            return Ok(Output::UpdateFavorites);
                         }
                         Ok(Output::Consumed)
                     }
@@ -163,7 +158,7 @@ impl QueueState {
                                 "{} removed from favorites",
                                 selected.title
                             )));
-                            return Ok(Output::FavoriteRemoved(FavoriteRemove::Track(selected.id)));
+                            return Ok(Output::UpdateFavorites);
                         }
                         Ok(Output::Consumed)
                     }

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use controls_module::models::Artist;
 use player_module::{AppResult, client::Client, notification::Notification};
 use ratatui::{
@@ -11,9 +9,9 @@ use ratatui::{
 };
 
 use crate::{
-    app::{FavoriteAdd, FavoriteRemove, FilteredListState, NotificationList, Output},
+    app::{FilteredListState, NotificationList, Output},
     popup::{ArtistPopupState, Popup},
-    ui::{basic_list_table, mark_favorite},
+    ui::basic_list_table,
 };
 
 #[derive(Default)]
@@ -34,24 +32,12 @@ impl ArtistList {
         Self { items: artists }
     }
 
-    pub fn render(
-        &mut self,
-        area: Rect,
-        buf: &mut Buffer,
-        focus: bool,
-        favorite_artists: &HashSet<u32>,
-    ) {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer, focus: bool) {
         let table = basic_list_table(
             self.items
                 .filter()
                 .iter()
-                .map(|artist| {
-                    let name = Line::from(artist.name.clone());
-                    Row::new(vec![mark_favorite(
-                        name,
-                        favorite_artists.contains(&artist.id),
-                    )])
-                })
+                .map(|artist| Row::new(Line::from(artist.name.clone())))
                 .collect::<Vec<_>>(),
             focus,
         );
@@ -99,7 +85,7 @@ impl ArtistList {
                         "{} added to favorites",
                         selected.name
                     )));
-                    return Ok(Output::FavoriteAdded(FavoriteAdd::Artist(selected.clone())));
+                    return Ok(Output::UpdateFavorites);
                 }
                 Ok(Output::Consumed)
             }
@@ -115,7 +101,7 @@ impl ArtistList {
                         "{} removed from favorites",
                         selected.name
                     )));
-                    return Ok(Output::FavoriteRemoved(FavoriteRemove::Artist(selected.id)));
+                    return Ok(Output::UpdateFavorites);
                 }
                 Ok(Output::Consumed)
             }

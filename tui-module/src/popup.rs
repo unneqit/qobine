@@ -12,10 +12,9 @@ use ratatui_image::{StatefulImage, protocol::StatefulProtocol};
 use tui_input::{Input, backend::crossterm::EventHandler};
 
 use crate::{
-    app::{FavoriteIds, NotificationList, Output},
+    app::{NotificationList, Output},
     ui::{
-        HIGHLIGHT_STYLE, block, center, centered_rect_fixed, format_seconds, mark_favorite,
-        render_input, tab_bar,
+        HIGHLIGHT_STYLE, block, center, centered_rect_fixed, format_seconds, render_input, tab_bar,
     },
     widgets::{
         album_list::AlbumList,
@@ -284,16 +283,10 @@ impl AlbumPopupState {
         }
     }
 
-    fn detail_lines(&self, is_favorite: bool, is_artist_favorite: bool) -> [Line<'static>; 3] {
-        let title = mark_favorite(
-            Line::from(Span::styled(self.title.clone(), Style::new().bold())),
-            is_favorite,
-        );
+    fn detail_lines(&self) -> [Line<'static>; 3] {
+        let title = Line::from(Span::styled(self.title.clone(), Style::new().bold()));
 
-        let artist = mark_favorite(
-            Line::from(Span::from(self.artist.name.clone())),
-            is_artist_favorite,
-        );
+        let artist = Line::from(Span::from(self.artist.name.clone()));
 
         let mut parts = Vec::new();
         if self.release_year > 0 {
@@ -522,7 +515,7 @@ impl Popup {
         }
     }
 
-    pub fn render(&mut self, frame: &mut Frame, favorite_ids: &FavoriteIds) {
+    pub fn render(&mut self, frame: &mut Frame) {
         match self {
             Popup::Album(album) => {
                 let visible_rows = (album.current_row_count() + 1).min(15) as u16;
@@ -574,14 +567,11 @@ impl Popup {
                     ])
                     .split(chunks[0]);
 
-                let is_favorite = favorite_ids.albums.contains(&album.id);
-                let is_artist_favorite = favorite_ids.artists.contains(&album.artist.id);
-
                 if let Some((protocol, _)) = album.image.as_mut() {
                     frame.render_stateful_widget(StatefulImage::default(), header[0], protocol);
                 }
 
-                let [title, artist, misc] = album.detail_lines(is_favorite, is_artist_favorite);
+                let [title, artist, misc] = album.detail_lines();
 
                 let has_description = album.description.as_ref().is_some_and(|d| !d.is_empty());
 
@@ -641,19 +631,12 @@ impl Popup {
                     );
                 } else if let Some(state) = album.current_state_mut() {
                     match state {
-                        SelectedAlbumPopupSubtabMut::Tracks(track_list) => track_list.render(
-                            content,
-                            frame.buffer_mut(),
-                            true,
-                            true,
-                            &favorite_ids.tracks,
-                        ),
-                        SelectedAlbumPopupSubtabMut::Similar(album_list) => album_list.render(
-                            content,
-                            frame.buffer_mut(),
-                            true,
-                            &favorite_ids.albums,
-                        ),
+                        SelectedAlbumPopupSubtabMut::Tracks(track_list) => {
+                            track_list.render(content, frame.buffer_mut(), true, true)
+                        }
+                        SelectedAlbumPopupSubtabMut::Similar(album_list) => {
+                            album_list.render(content, frame.buffer_mut(), true)
+                        }
                     }
                 }
             }
@@ -707,19 +690,14 @@ impl Popup {
                     ])
                     .split(chunks[0]);
 
-                let is_favorite = favorite_ids.artists.contains(&artist.id);
-
                 if let Some((protocol, _)) = artist.image.as_mut() {
                     frame.render_stateful_widget(StatefulImage::default(), header[0], protocol);
                 }
 
-                let name = mark_favorite(
-                    Line::from(Span::styled(
-                        artist.artist_name.clone(),
-                        Style::new().bold(),
-                    )),
-                    is_favorite,
-                );
+                let name = Line::from(Span::styled(
+                    artist.artist_name.clone(),
+                    Style::new().bold(),
+                ));
 
                 let info_chunks = Layout::default()
                     .direction(Direction::Vertical)
@@ -756,25 +734,15 @@ impl Popup {
                     render_about(frame, content, &description, &[], &mut artist.about_scroll);
                 } else if let Some(state) = artist.current_state_mut() {
                     match state {
-                        SelectedArtistPopupSubtabMut::Albums(album_list) => album_list.render(
-                            content,
-                            frame.buffer_mut(),
-                            true,
-                            &favorite_ids.albums,
-                        ),
-                        SelectedArtistPopupSubtabMut::TopTracks(track_list) => track_list.render(
-                            content,
-                            frame.buffer_mut(),
-                            true,
-                            true,
-                            &favorite_ids.tracks,
-                        ),
-                        SelectedArtistPopupSubtabMut::Similar(artist_list) => artist_list.render(
-                            content,
-                            frame.buffer_mut(),
-                            true,
-                            &favorite_ids.artists,
-                        ),
+                        SelectedArtistPopupSubtabMut::Albums(album_list) => {
+                            album_list.render(content, frame.buffer_mut(), true)
+                        }
+                        SelectedArtistPopupSubtabMut::TopTracks(track_list) => {
+                            track_list.render(content, frame.buffer_mut(), true, true)
+                        }
+                        SelectedArtistPopupSubtabMut::Similar(artist_list) => {
+                            artist_list.render(content, frame.buffer_mut(), true)
+                        }
                     }
                 }
             }
@@ -812,13 +780,9 @@ impl Popup {
                     ])
                     .split(inner);
 
-                playlist_state.tracks.render(
-                    chunks[0],
-                    frame.buffer_mut(),
-                    true,
-                    true,
-                    &favorite_ids.tracks,
-                );
+                playlist_state
+                    .tracks
+                    .render(chunks[0], frame.buffer_mut(), true, true);
                 frame.render_widget(buttons, chunks[2]);
             }
             Popup::Track(track_state) => {
@@ -868,8 +832,7 @@ impl Popup {
                 render_playlist_info(frame, playlist, image);
             }
             Popup::TrackInfo(track, image, selected) => {
-                let is_favorite = favorite_ids.tracks.contains(&track.id);
-                render_track_info(frame, track, is_favorite, *selected, image);
+                render_track_info(frame, track, *selected, image);
             }
         };
     }
@@ -1315,14 +1278,10 @@ fn header_blurb(description: &str, width: usize) -> Line<'static> {
 fn render_track_info(
     frame: &mut Frame,
     track: &Track,
-    is_favorite: bool,
     selected: usize,
     image: &mut Option<(StatefulProtocol, f32)>,
 ) {
-    let title = mark_favorite(
-        Line::from(Span::styled(track.title.clone(), Style::new().bold())),
-        is_favorite,
-    );
+    let title = Line::from(Span::styled(track.title.clone(), Style::new().bold()));
 
     let artist_name = track
         .artist_name

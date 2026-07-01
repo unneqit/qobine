@@ -91,7 +91,6 @@ pub async fn init(
         ),
         client,
         picker,
-        favorite_ids: Default::default(),
         connect_available_devices,
         connect_active_device,
         set_connect_active_device,
