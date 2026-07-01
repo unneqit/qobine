@@ -52,7 +52,11 @@ impl AlbumList {
     }
 
     pub fn set_all_items(&mut self, items: Vec<AlbumSimple>) {
+        let is_empty = items.is_empty();
         self.items.set_all_items(items);
+        if !is_empty {
+            self.items.state.select(Some(0));
+        }
     }
 
     pub async fn handle_events(
