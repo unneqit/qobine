@@ -26,8 +26,7 @@ pub fn render(
         None => return,
     };
 
-    let title = get_status(state.status).to_string();
-    let block = block(Some(&title));
+    let block = block(Some(get_status(state.status)));
 
     let length = state
         .image

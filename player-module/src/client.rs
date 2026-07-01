@@ -422,7 +422,10 @@ impl Client {
     pub async fn remove_favorite_track(&self, id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_track(id).await?;
-        self.favorites_cache.clear().await;
+        if let Some(mut cache) = self.favorites_cache.get().await {
+            cache.tracks.retain(|track| track.id != id);
+            self.favorites_cache.set(cache).await;
+        }
         Ok(())
     }
 
@@ -436,7 +439,10 @@ impl Client {
     pub async fn remove_favorite_album(&self, id: &str) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_album(id).await?;
-        self.favorites_cache.clear().await;
+        if let Some(mut cache) = self.favorites_cache.get().await {
+            cache.albums.retain(|album| album.id != id);
+            self.favorites_cache.set(cache).await;
+        }
         Ok(())
     }
 
@@ -450,7 +456,10 @@ impl Client {
     pub async fn remove_favorite_artist(&self, id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_artist(id).await?;
-        self.favorites_cache.clear().await;
+        if let Some(mut cache) = self.favorites_cache.get().await {
+            cache.artists.retain(|artist| artist.id != id);
+            self.favorites_cache.set(cache).await;
+        }
         Ok(())
     }
 
@@ -464,7 +473,10 @@ impl Client {
     pub async fn remove_favorite_playlist(&self, id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_playlist(id).await?;
-        self.favorites_cache.clear().await;
+        if let Some(mut cache) = self.favorites_cache.get().await {
+            cache.playlists.retain(|playlist| playlist.id != id);
+            self.favorites_cache.set(cache).await;
+        }
         Ok(())
     }
 

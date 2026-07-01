@@ -461,28 +461,27 @@ impl App {
                 }
             }
             Output::AddTrackToPlaylistPopup(track) => {
-                let playlists_res = self.client.favorites().await.map(|favs| {
-                    favs.playlists
-                        .into_iter()
-                        .filter(|p| p.is_owned)
-                        .map(|x| x.into())
-                        .collect::<Vec<_>>()
-                });
+                let playlists = self
+                    .favorites
+                    .playlists
+                    .all_items()
+                    .iter()
+                    .filter(|p| p.is_owned)
+                    .cloned()
+                    .collect();
 
-                if let Ok(playlists) = playlists_res {
-                    let mut popups = match std::mem::take(&mut self.app_state) {
-                        AppState::Popup(v) => v,
-                        other => {
-                            self.app_state = other;
-                            Vec::new()
-                        }
-                    };
+                let mut popups = match std::mem::take(&mut self.app_state) {
+                    AppState::Popup(v) => v,
+                    other => {
+                        self.app_state = other;
+                        Vec::new()
+                    }
+                };
 
-                    popups.push(Popup::Track(TrackPopupState::new(track, playlists)));
+                popups.push(Popup::Track(TrackPopupState::new(track, playlists)));
 
-                    self.app_state = AppState::Popup(popups);
-                    self.should_draw = true;
-                }
+                self.app_state = AppState::Popup(popups);
+                self.should_draw = true;
             }
             Output::AddTrackToPlaylistAndPopPopup((track_id, playlist_id)) => {
                 match self
