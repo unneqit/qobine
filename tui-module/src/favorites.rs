@@ -88,20 +88,31 @@ impl FavoritesState {
 
         let content_focused = self.focus == FavoritesFocus::Content;
         match self.sub_tab {
-            SubTab::Albums => self
-                .albums
-                .render(chunks[1], frame.buffer_mut(), content_focused),
-            SubTab::Artists => self
-                .artists
-                .render(chunks[1], frame.buffer_mut(), content_focused),
-            SubTab::Playlists => {
-                self.playlists
-                    .render(chunks[1], frame.buffer_mut(), content_focused)
-            }
-            SubTab::Tracks => {
-                self.tracks
-                    .render(chunks[1], frame.buffer_mut(), true, content_focused)
-            }
+            SubTab::Albums => self.albums.render(
+                chunks[1],
+                frame.buffer_mut(),
+                content_focused,
+                &Default::default(),
+            ),
+            SubTab::Artists => self.artists.render(
+                chunks[1],
+                frame.buffer_mut(),
+                content_focused,
+                &Default::default(),
+            ),
+            SubTab::Playlists => self.playlists.render(
+                chunks[1],
+                frame.buffer_mut(),
+                content_focused,
+                &Default::default(),
+            ),
+            SubTab::Tracks => self.tracks.render(
+                chunks[1],
+                frame.buffer_mut(),
+                true,
+                content_focused,
+                &Default::default(),
+            ),
         };
     }
 

@@ -27,7 +27,7 @@ use player_module::{
 };
 use ratatui::{DefaultTerminal, widgets::*};
 use ratatui_image::{picker::Picker, protocol::StatefulProtocol};
-use std::{io, sync::Arc, time::Instant};
+use std::{collections::HashSet, io, sync::Arc, time::Instant};
 use tokio::{
     sync::{mpsc, watch},
     time::{self, Duration},
@@ -71,6 +71,7 @@ pub struct App {
     pub app_state: AppState,
     pub now_playing: NowPlayingState,
     pub favorites: FavoritesState,
+    pub favorite_ids: FavoriteIds,
     pub search: SearchState,
     pub queue: QueueState,
     pub discover: DiscoverState,
@@ -94,6 +95,31 @@ pub enum AppState {
     Popup(Vec<Popup>),
     Help,
     ConnectPopup(usize),
+}
+
+pub struct FavoriteIds {
+    albums: HashSet<String>,
+    artists: HashSet<u32>,
+    playlists: HashSet<u32>,
+    tracks: HashSet<u32>,
+}
+
+impl FavoriteIds {
+    pub fn albums(&self) -> &HashSet<String> {
+        &self.albums
+    }
+
+    pub fn artists(&self) -> &HashSet<u32> {
+        &self.artists
+    }
+
+    pub fn playlists(&self) -> &HashSet<u32> {
+        &self.playlists
+    }
+
+    pub fn tracks(&self) -> &HashSet<u32> {
+        &self.tracks
+    }
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -293,18 +319,11 @@ impl App {
     }
 
     pub(crate) async fn update_favorites(&mut self) {
-        let favorites = self.client.favorites().await;
-        let Ok(favorites) = favorites else {
-            return;
-        };
-
-        self.favorites.albums.set_all_items(favorites.albums);
-        self.favorites.artists.set_all_items(favorites.artists);
-        self.favorites
-            .playlists
-            .set_all_items(favorites.playlists.into_iter().map(|x| x.into()).collect());
-        self.favorites.tracks.set_all_items(favorites.tracks);
-        self.favorites.filter.reset();
+        let favorites = FavoritesState::new(&self.client).await;
+        if let Ok(favorites) = favorites {
+            self.favorite_ids = build_favorite_ids(&favorites);
+            self.favorites = favorites;
+        }
     }
 
     async fn push_popup(&mut self, mut popup: Popup) {
@@ -729,4 +748,41 @@ pub fn get_current_state_without_image(
     };
 
     (state, image)
+}
+
+pub fn build_favorite_ids(favorite_state: &FavoritesState) -> FavoriteIds {
+    let albums = favorite_state
+        .albums
+        .all_items()
+        .iter()
+        .map(|x| x.id.clone())
+        .collect();
+
+    let artists = favorite_state
+        .artists
+        .all_items()
+        .iter()
+        .map(|x| x.id)
+        .collect();
+
+    let playlists = favorite_state
+        .playlists
+        .all_items()
+        .iter()
+        .map(|x| x.id)
+        .collect();
+
+    let tracks = favorite_state
+        .tracks
+        .all_items()
+        .iter()
+        .map(|x| x.id)
+        .collect();
+
+    FavoriteIds {
+        albums,
+        artists,
+        playlists,
+        tracks,
+    }
 }
