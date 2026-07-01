@@ -422,10 +422,7 @@ impl Client {
     pub async fn remove_favorite_track(&self, id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_track(id).await?;
-        if let Some(mut cache) = self.favorites_cache.get().await {
-            cache.tracks.retain(|track| track.id != id);
-            self.favorites_cache.set(cache).await;
-        }
+        self.favorites_cache.clear().await;
         Ok(())
     }
 
@@ -439,10 +436,7 @@ impl Client {
     pub async fn remove_favorite_album(&self, id: &str) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_album(id).await?;
-        if let Some(mut cache) = self.favorites_cache.get().await {
-            cache.albums.retain(|album| album.id != id);
-            self.favorites_cache.set(cache).await;
-        }
+        self.favorites_cache.clear().await;
         Ok(())
     }
 
@@ -456,10 +450,7 @@ impl Client {
     pub async fn remove_favorite_artist(&self, id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_artist(id).await?;
-        if let Some(mut cache) = self.favorites_cache.get().await {
-            cache.artists.retain(|artist| artist.id != id);
-            self.favorites_cache.set(cache).await;
-        }
+        self.favorites_cache.clear().await;
         Ok(())
     }
 
@@ -473,10 +464,7 @@ impl Client {
     pub async fn remove_favorite_playlist(&self, id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.remove_favorite_playlist(id).await?;
-        if let Some(mut cache) = self.favorites_cache.get().await {
-            cache.playlists.retain(|playlist| playlist.id != id);
-            self.favorites_cache.set(cache).await;
-        }
+        self.favorites_cache.clear().await;
         Ok(())
     }
 
@@ -571,16 +559,7 @@ impl Client {
     pub async fn delete_playlist(&self, playlist_id: u32) -> Result<()> {
         let client = self.get_client().await?;
         client.delete_playlist(playlist_id).await?;
-        let cache = self.favorites_cache.get().await;
-
-        if let Some(mut cache) = cache {
-            cache
-                .playlists
-                .retain(|playlist| playlist.id != playlist_id);
-
-            self.favorites_cache.set(cache).await;
-        }
-
+        self.favorites_cache.clear().await;
         Ok(())
     }
 
