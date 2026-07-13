@@ -79,7 +79,6 @@ pub struct App {
     pub preferences: PreferencesState,
     pub broadcast: Arc<NotificationBroadcast>,
     pub notifications: NotificationList,
-    pub full_screen: bool,
     pub disable_tui_album_cover: bool,
     pub current_image_url: Option<String>,
     pub connect_available_devices: watch::Receiver<Vec<String>>,
@@ -95,6 +94,7 @@ pub enum AppState {
     Popup(Vec<Popup>),
     Help,
     ConnectPopup(usize),
+    Focus,
 }
 
 pub struct FavoriteIds {
@@ -461,7 +461,7 @@ impl App {
                     self.should_draw = true;
                 }
                 KeyCode::Char('F') => {
-                    self.full_screen = !self.full_screen;
+                    self.app_state = AppState::Focus;
                     self.should_draw = true;
                 }
                 _ => {}
@@ -533,7 +533,7 @@ impl App {
         match event {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 match &mut self.app_state {
-                    AppState::Help => {
+                    AppState::Help | AppState::Focus => {
                         self.app_state = AppState::Normal;
                         self.should_draw = true;
                         return Ok(());
@@ -610,7 +610,7 @@ impl App {
                         self.should_draw = true;
                         return Ok(());
                     }
-                    _ => {}
+                    AppState::Normal => {}
                 };
 
                 let screen_output = match self.current_screen {

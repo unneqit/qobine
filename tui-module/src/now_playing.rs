@@ -18,7 +18,7 @@ pub fn render(
     frame: &mut Frame,
     area: Rect,
     state: &mut NowPlayingState,
-    full_screen: bool,
+    show_frame: bool,
     disable_tui_album_cover: bool,
 ) {
     let track = match &state.playing_track {
@@ -45,7 +45,7 @@ pub fn render(
             .to_vec()
     };
 
-    if !full_screen {
+    if !show_frame {
         frame.render_widget(block, area);
     }
 
