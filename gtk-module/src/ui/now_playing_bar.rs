@@ -183,9 +183,9 @@ impl NowPlayingBar {
 
                 let icon = if value <= 0.0 {
                     "audio-volume-muted-symbolic"
-                } else if value < 33.0 {
+                } else if value < 0.33 {
                     "audio-volume-low-symbolic"
-                } else if value < 66.0 {
+                } else if value < 0.66 {
                     "audio-volume-medium-symbolic"
                 } else {
                     "audio-volume-high-symbolic"
@@ -250,7 +250,7 @@ impl NowPlayingBar {
             .label("0:00")
             .css_classes(vec!["dim-label"])
             .width_chars(6)
-            .xalign(0.0)
+            .xalign(1.0)
             .valign(gtk::Align::Center)
             .build();
 
@@ -258,13 +258,14 @@ impl NowPlayingBar {
             .label("0:00")
             .css_classes(vec!["dim-label"])
             .width_chars(6)
-            .xalign(1.0)
+            .xalign(0.0)
             .valign(gtk::Align::Center)
             .build();
 
         let progress_scale = gtk::Scale::builder()
             .orientation(gtk::Orientation::Horizontal)
             .hexpand(true)
+            .width_request(300)
             .draw_value(false)
             .focusable(false)
             .valign(gtk::Align::Center)
@@ -275,44 +276,6 @@ impl NowPlayingBar {
             controls_seek.seek(Duration::from_millis(value as u64));
             glib::Propagation::Stop
         });
-
-        let progress_time_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .hexpand(true)
-            .halign(gtk::Align::Fill)
-            .spacing(6)
-            .build();
-
-        progress_current_label.set_hexpand(true);
-        progress_current_label.set_halign(gtk::Align::Start);
-        progress_current_label.set_xalign(0.0);
-
-        progress_total_label.set_hexpand(true);
-        progress_total_label.set_halign(gtk::Align::End);
-        progress_total_label.set_xalign(1.0);
-
-        progress_time_box.append(&progress_current_label);
-        progress_time_box.append(&progress_total_label);
-
-        let progress_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .halign(gtk::Align::Fill)
-            .valign(gtk::Align::Center)
-            .spacing(2)
-            .build();
-
-        progress_box.append(&progress_scale);
-        progress_box.append(&progress_time_box);
-
-        let progress_clamp = adw::Clamp::builder()
-            .child(&progress_box)
-            .maximum_size(420)
-            .tightening_threshold(320)
-            .width_request(320)
-            .halign(gtk::Align::End)
-            .valign(gtk::Align::Center)
-            .hexpand(false)
-            .build();
 
         let cover = gtk::Picture::builder()
             .content_fit(gtk::ContentFit::Contain)
@@ -328,6 +291,45 @@ impl NowPlayingBar {
             .valign(gtk::Align::Center)
             .build();
 
+        let progress_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .halign(gtk::Align::Fill)
+            .valign(gtk::Align::Center)
+            .hexpand(true)
+            .spacing(2)
+            .build();
+
+        progress_box.append(&progress_current_label);
+        progress_box.append(&progress_scale);
+        progress_box.append(&progress_total_label);
+
+        let playback_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .halign(gtk::Align::Center)
+            .valign(gtk::Align::Center)
+            .hexpand(true)
+            .spacing(4)
+            .build();
+
+        playback_box.append(&controls_box);
+        playback_box.append(&progress_box);
+
+        let playback_clamp = adw::Clamp::builder()
+            .child(&playback_box)
+            .maximum_size(520)
+            .tightening_threshold(320)
+            .hexpand(true)
+            .build();
+
+        let content = gtk::CenterBox::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .margin_start(12)
+            .margin_end(12)
+            .margin_top(12)
+            .margin_bottom(12)
+            .hexpand(true)
+            .build();
+
         let left_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
             .spacing(12)
@@ -339,29 +341,9 @@ impl NowPlayingBar {
         left_box.append(&cover_frame);
         left_box.append(&track_info_box);
 
-        let right_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .halign(gtk::Align::End)
-            .valign(gtk::Align::Center)
-            .hexpand(true)
-            .build();
-
-        right_box.append(&progress_clamp);
-
-        let content = gtk::CenterBox::builder()
-            .orientation(gtk::Orientation::Horizontal)
-            .margin_start(12)
-            .margin_end(12)
-            .margin_top(12)
-            .margin_bottom(12)
-            .halign(gtk::Align::Fill)
-            .valign(gtk::Align::Center)
-            .hexpand(true)
-            .build();
-
         content.set_start_widget(Some(&left_box));
-        content.set_center_widget(Some(&controls_box));
-        content.set_end_widget(Some(&right_box));
+        content.set_center_widget(Some(&playback_clamp));
+        content.set_end_widget(None::<&gtk::Widget>);
 
         let separator = gtk::Separator::builder()
             .orientation(gtk::Orientation::Horizontal)
