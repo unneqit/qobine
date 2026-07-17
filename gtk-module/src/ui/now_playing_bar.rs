@@ -71,13 +71,16 @@ impl NowPlayingBar {
             .halign(gtk::Align::Fill)
             .build();
 
+        let track_info_spacer = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        track_info_spacer.set_vexpand(true);
+
         let track_info_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .valign(gtk::Align::End)
-            .spacing(2)
+            .valign(gtk::Align::Fill)
             .build();
 
         track_info_box.append(&title_label);
+        track_info_box.append(&track_info_spacer);
         track_info_box.append(&subtitle_box);
 
         let connect_button = gtk::MenuButton::builder()
@@ -310,13 +313,16 @@ impl NowPlayingBar {
         progress_box.append(&progress_scale);
         progress_box.append(&progress_total_label);
 
+        let playback_spacer = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        playback_spacer.set_vexpand(true);
+
         let playback_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .valign(gtk::Align::End)
-            .spacing(4)
+            .valign(gtk::Align::Fill)
             .build();
 
         playback_box.append(&controls_box);
+        playback_box.append(&playback_spacer);
         playback_box.append(&progress_box);
 
         let content = gtk::Box::builder()
@@ -326,11 +332,13 @@ impl NowPlayingBar {
             .margin_end(12)
             .margin_top(12)
             .margin_bottom(12)
+            .hexpand(true)
             .build();
 
         let left_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
             .spacing(12)
+            .valign(gtk::Align::Fill)
             .build();
 
         left_box.append(&cover_frame);
