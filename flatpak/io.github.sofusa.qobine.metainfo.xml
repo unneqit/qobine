@@ -6,7 +6,7 @@
   <summary>Unofficial client for Qobuz</summary>
 
   <description>
-    <p>Listening to your Qobuz music with Qobine: an Adwaita Qobuz client designed for GNOME.</p>
+    <p>Listening to your Qobuz music with Qobine: a Qobuz client designed for GNOME.</p>
     <p>Upon first launch, a browser spawns where you will need to login to Qobuz with your active streaming subscription.</p>
 
     <p>Qobine supports full Qobuz audio quality. But make sure that your pipewire configuration is correct.</p>
