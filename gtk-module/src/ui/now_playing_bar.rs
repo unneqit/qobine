@@ -1,4 +1,8 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    time::Duration,
+};
 
 use gtk4 as gtk;
 use libadwaita as adw;
@@ -36,6 +40,8 @@ pub struct NowPlayingBar {
     on_open_album: Rc<dyn Fn(AlbumHeaderInfo)>,
     on_open_artist: Rc<dyn Fn(ArtistHeaderInfo)>,
     on_open_playlist: Rc<dyn Fn(PlaylistHeaderInfo)>,
+
+    setting_volume_from_backend: Rc<Cell<bool>>,
 }
 
 impl NowPlayingBar {
@@ -47,6 +53,7 @@ impl NowPlayingBar {
         on_open_playlist: Rc<dyn Fn(PlaylistHeaderInfo)>,
         volume: f32,
     ) -> Self {
+        let setting_volume_from_backend = Rc::new(Cell::new(false));
         let available_devices = Rc::new(RefCell::new(Vec::<String>::new()));
         let active_device = Rc::new(RefCell::new(String::new()));
 
@@ -66,8 +73,7 @@ impl NowPlayingBar {
 
         let track_info_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .halign(gtk::Align::Fill)
-            .valign(gtk::Align::Center)
+            .valign(gtk::Align::End)
             .spacing(2)
             .build();
 
@@ -176,10 +182,14 @@ impl NowPlayingBar {
         volume_scale.connect_value_changed({
             let volume_button = volume_button.clone();
             let controls = controls.clone();
+            let updating = setting_volume_from_backend.clone();
 
             move |scale| {
                 let value = scale.value();
-                controls.set_volume(value as f32);
+
+                if !updating.get() {
+                    controls.set_volume(value as f32);
+                }
 
                 let icon = if value <= 0.0 {
                     "audio-volume-muted-symbolic"
@@ -216,7 +226,7 @@ impl NowPlayingBar {
             .orientation(gtk::Orientation::Horizontal)
             .spacing(12)
             .halign(gtk::Align::Center)
-            .valign(gtk::Align::Center)
+            .valign(gtk::Align::End)
             .build();
 
         let controls_prev = controls.clone();
@@ -284,7 +294,7 @@ impl NowPlayingBar {
             .vexpand(false)
             .build();
 
-        let clamp = adw::Clamp::builder().child(&cover).maximum_size(75).build();
+        let clamp = adw::Clamp::builder().child(&cover).maximum_size(70).build();
 
         let cover_frame = gtk::Frame::builder()
             .child(&clamp)
@@ -293,9 +303,6 @@ impl NowPlayingBar {
 
         let progress_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
-            .halign(gtk::Align::Fill)
-            .valign(gtk::Align::Center)
-            .hexpand(true)
             .spacing(2)
             .build();
 
@@ -305,45 +312,32 @@ impl NowPlayingBar {
 
         let playback_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
-            .halign(gtk::Align::Center)
-            .valign(gtk::Align::Center)
-            .hexpand(true)
+            .valign(gtk::Align::End)
             .spacing(4)
             .build();
 
         playback_box.append(&controls_box);
         playback_box.append(&progress_box);
 
-        let playback_clamp = adw::Clamp::builder()
-            .child(&playback_box)
-            .maximum_size(520)
-            .tightening_threshold(320)
-            .hexpand(true)
-            .build();
-
-        let content = gtk::CenterBox::builder()
+        let content = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
+            .spacing(12)
             .margin_start(12)
             .margin_end(12)
             .margin_top(12)
             .margin_bottom(12)
-            .hexpand(true)
             .build();
 
         let left_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Horizontal)
             .spacing(12)
-            .halign(gtk::Align::Start)
-            .valign(gtk::Align::Center)
-            .hexpand(true)
             .build();
 
         left_box.append(&cover_frame);
         left_box.append(&track_info_box);
 
-        content.set_start_widget(Some(&left_box));
-        content.set_center_widget(Some(&playback_clamp));
-        content.set_end_widget(None::<&gtk::Widget>);
+        content.append(&left_box);
+        content.append(&playback_box);
 
         let separator = gtk::Separator::builder()
             .orientation(gtk::Orientation::Horizontal)
@@ -352,9 +346,6 @@ impl NowPlayingBar {
         let bar = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .css_classes(vec!["view"])
-            .halign(gtk::Align::Fill)
-            .valign(gtk::Align::End)
-            .hexpand(true)
             .build();
 
         bar.append(&separator);
@@ -386,11 +377,20 @@ impl NowPlayingBar {
             on_open_artist,
             on_open_playlist,
             volume_scale,
+            setting_volume_from_backend,
         }
     }
 
     pub fn set_volume(&self, volume: f32) {
-        self.volume_scale.set_value(volume.into());
+        let volume = volume.clamp(0.0, 1.0) as f64;
+
+        if (self.volume_scale.value() - volume).abs() < 0.001 {
+            return;
+        }
+
+        self.setting_volume_from_backend.set(true);
+        self.volume_scale.set_value(volume);
+        self.setting_volume_from_backend.set(false);
     }
 
     pub fn set_output_devices(&self, available_devices: Vec<String>, active_device: String) {
