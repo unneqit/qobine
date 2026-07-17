@@ -7,6 +7,7 @@ use tui_input::Input;
 use crate::{
     app::{App, AppState, Tab},
     now_playing::{self},
+    widgets::focus,
 };
 
 pub const HIGHLIGHT_STYLE: Style = Style::new().white().on_blue();
@@ -32,12 +33,10 @@ impl App {
                 render_connect(frame, available_devices, active_device, selected);
             }
             AppState::Focus => {
-                let area = center(area, Constraint::Percentage(80), Constraint::Length(10));
-                now_playing::render(
+                focus::render(
                     frame,
                     area,
                     &mut self.now_playing,
-                    true,
                     self.disable_tui_album_cover,
                 );
             }
@@ -79,13 +78,7 @@ impl App {
         frame.render_widget(tabs, chunks[0]);
 
         if self.now_playing.playing_track.is_some() {
-            now_playing::render(
-                frame,
-                chunks[2],
-                &mut self.now_playing,
-                false,
-                hide_album_cover,
-            );
+            now_playing::render(frame, chunks[2], &mut self.now_playing, hide_album_cover);
         }
 
         let tab_content_area = if self.now_playing.playing_track.is_some() {

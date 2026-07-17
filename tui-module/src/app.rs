@@ -270,6 +270,7 @@ impl App {
                         new_state.image = self.now_playing.image.take();
                     } else if !self.disable_tui_album_cover {
                         if let Some(url) = image_url.clone() {
+                            new_state.image = self.now_playing.image.take();
                             let tx = image_tx.clone();
                             let picker = self.picker.clone();
                             tokio::spawn(async move {
@@ -323,6 +324,20 @@ impl App {
         if let Ok(favorites) = favorites {
             self.favorite_ids = build_favorite_ids(&favorites);
             self.favorites = favorites;
+        }
+    }
+
+    fn handle_focus_event(&mut self, key_code: KeyCode) -> AppResult<Output> {
+        match key_code {
+            KeyCode::Esc | KeyCode::Char('F') => {
+                self.app_state = AppState::Normal;
+                Ok(Output::Consumed)
+            }
+            KeyCode::Char(' ') => {
+                self.controls.play_pause();
+                Ok(Output::Consumed)
+            }
+            _ => Ok(Output::NotConsumed),
         }
     }
 
@@ -533,8 +548,14 @@ impl App {
         match event {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 match &mut self.app_state {
-                    AppState::Help | AppState::Focus => {
+                    AppState::Help => {
                         self.app_state = AppState::Normal;
+                        self.should_draw = true;
+                        return Ok(());
+                    }
+                    AppState::Focus => {
+                        let output = self.handle_focus_event(key_event.code);
+                        self.handle_output(key_event.code, output).await;
                         self.should_draw = true;
                         return Ok(());
                     }

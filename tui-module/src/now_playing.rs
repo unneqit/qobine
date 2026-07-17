@@ -18,7 +18,6 @@ pub fn render(
     frame: &mut Frame,
     area: Rect,
     state: &mut NowPlayingState,
-    show_frame: bool,
     disable_tui_album_cover: bool,
 ) {
     let track = match &state.playing_track {
@@ -45,9 +44,7 @@ pub fn render(
             .to_vec()
     };
 
-    if !show_frame {
-        frame.render_widget(block, area);
-    }
+    frame.render_widget(block, area);
 
     if let Some(image) = &mut state.image
         && !disable_tui_album_cover
@@ -79,8 +76,13 @@ pub fn render(
         state.tracklist_length
     )));
 
+    render_progress(frame, info_chunks[1], state.duration_ms, track);
+    frame.render_widget(Text::from(lines), info_chunks[0]);
+}
+
+pub(crate) fn render_progress(frame: &mut Frame, area: Rect, duration_ms: u32, track: &Track) {
     let total_ms = track.duration_seconds.saturating_mul(1000);
-    let duration = state.duration_ms.min(total_ms);
+    let duration = duration_ms.min(total_ms);
 
     let ratio = duration as f64 / (track.duration_seconds * 1000) as f64;
 
@@ -91,10 +93,9 @@ pub fn render(
             Constraint::Min(1),
             Constraint::Length(7),
         ])
-        .split(info_chunks[1]);
+        .split(area);
 
-    let current_time =
-        Paragraph::new(format_mseconds(state.duration_ms)).alignment(Alignment::Left);
+    let current_time = Paragraph::new(format_mseconds(duration_ms)).alignment(Alignment::Left);
 
     let total_time =
         Paragraph::new(format_seconds(track.duration_seconds)).alignment(Alignment::Right);
@@ -108,10 +109,9 @@ pub fn render(
     frame.render_widget(current_time, progress_chunks[0]);
     frame.render_widget(gauge, progress_chunks[1]);
     frame.render_widget(total_time, progress_chunks[2]);
-    frame.render_widget(Text::from(lines), info_chunks[0]);
 }
 
-fn get_status(state: Status) -> &'static str {
+pub fn get_status(state: Status) -> &'static str {
     match state {
         Status::Playing => "Playing ⏵",
         Status::Paused => "Paused ⏸",
