@@ -22,11 +22,7 @@ use webkit6::{WebView, prelude::*};
 
 use crate::{
     callbacks::{CallbackHandles, build_callbacks},
-    ui::{
-        DetailPage,
-        app_shell::AppShell,
-        now_playing_bar::{NowPlayingBar, update_now_playing_button_icon, update_progress},
-    },
+    ui::{DetailPage, app_shell::AppShell, now_playing_bar::NowPlayingBar},
 };
 
 mod callbacks;
@@ -372,10 +368,10 @@ fn setup_listener(
                     }
                 }
                 UiEvent::Status(status) => {
-                    update_now_playing_button_icon(&status, &now_playing_bar.play_button);
+                    now_playing_bar.update_now_playing_button_icon(&status);
                 }
                 UiEvent::Position(duration) => {
-                    update_progress(&now_playing_bar, &duration);
+                    now_playing_bar.update_progress(&duration);
                 }
                 UiEvent::Volume(volume) => {
                     now_playing_bar.set_volume(volume);

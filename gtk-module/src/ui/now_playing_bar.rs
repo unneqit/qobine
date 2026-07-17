@@ -22,7 +22,7 @@ pub struct NowPlayingBar {
     track_title_label: gtk::Label,
     subtitle_box: gtk::Box,
     cover: gtk::Picture,
-    pub play_button: gtk::Button,
+    play_button: gtk::Button,
     volume_scale: gtk::Scale,
 
     progress_scale: gtk::Scale,
@@ -537,20 +537,24 @@ impl NowPlayingBar {
 
         self.revealer.set_reveal_child(true);
     }
-}
 
-pub fn update_progress(bar: &NowPlayingBar, position: &Duration) {
-    animate_scale_to(&bar.progress_scale, position.as_millis() as f64, 120);
+    pub fn update_progress(&self, position: &Duration) {
+        animate_scale_to(&self.progress_scale, position.as_millis() as f64, 120);
 
-    bar.progress_current_label
-        .set_text(&format_time(position.as_secs() as u32));
-}
+        self.progress_current_label
+            .set_text(&format_time(position.as_secs() as u32));
+    }
 
-pub fn update_now_playing_button_icon(status: &Status, button: &gtk::Button) {
-    match status {
-        Status::Playing => button.set_icon_name("media-playback-pause-symbolic"),
-        Status::Buffering => button.set_icon_name("content-loading-symbolic"),
-        Status::Paused => button.set_icon_name("media-playback-start-symbolic"),
+    pub fn update_now_playing_button_icon(&self, status: &Status) {
+        match status {
+            Status::Playing => self
+                .play_button
+                .set_icon_name("media-playback-pause-symbolic"),
+            Status::Buffering => self.play_button.set_icon_name("content-loading-symbolic"),
+            Status::Paused => self
+                .play_button
+                .set_icon_name("media-playback-start-symbolic"),
+        }
     }
 }
 
