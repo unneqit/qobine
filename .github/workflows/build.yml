@@ -1,0 +1,28 @@
+name: Build Qobine for Raspberry Pi
+
+on:
+  workflow_dispatch: # Allows you to trigger this manually
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install Cross-Compiler Engine
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Compile Binary
+        run: cross build --target aarch64-unknown-linux-gnu --release
+
+      - name: Upload Finished Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: qobine-executable
+          path: target/aarch64-unknown-linux-gnu/release/qobine
