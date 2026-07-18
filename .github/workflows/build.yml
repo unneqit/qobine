@@ -1,7 +1,7 @@
 name: Build Qobine for Raspberry Pi
 
 on:
-  workflow_dispatch: # Allows you to trigger this manually
+  workflow_dispatch:
 
 jobs:
   build:
@@ -10,16 +10,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install Cross-Compilation Linker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
       - name: Install Rust Toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-unknown-linux-gnu
 
-      - name: Install Cross-Compiler Engine
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
-      - name: Compile Binary
-        run: cross build --target aarch64-unknown-linux-gnu --release
+      - name: Compile Binary with Forced Vendored OpenSSL
+        env:
+          OPENSSL_VENDORED: 1
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: cargo build --release --target aarch64-unknown-linux-gnu
 
       - name: Upload Finished Binary
         uses: actions/upload-artifact@v4
